@@ -78,19 +78,6 @@ double get_cosmol_c(double h,double omega,double omega_lambda,double* q){
     return (omega_lambda/(3*h*h));
 }
 
-// {F77} c     ===========================================================================
-// {F77}       REAL*8 FUNCTION FUNL(x)
-// {F77} c     ---------------------------------------------------------------------------
-// {F77} c     For non-zero cosmological constant
-// {F77} c     ===========================================================================
-// {F77}       real*8 x, omega0, omegainv
-// {F77}       common /cosm/ omega0
-// {F77}       omegainv = 1. / omega0
-// {F77}       funl = 1. / sqrt(((x ** 3.) + omegainv) - 1.)
-// {F77}       return
-// {F77}       end
-
-
 // Replaces FORTRAN function FUNL
 double get_funl(double x){
     double omegainv;
@@ -120,8 +107,6 @@ void get_midpnt(double (*func)(double),double a,double b,double* s,double n){
         (*s)=((*s)+(b-a)*sum/tnm)/3;
     }
 }
-
-    
 
 // Replaces FORTRAN function DL
 double get_dl(double h,double q,double z){
@@ -192,6 +177,50 @@ void sort2(double arr[], int left, int right) {
     if (i < right)
         sort2(arr, i, right);
 }
+
+// {F77} c     ===========================================================================
+// {F77}       SUBROUTINE GET_HISTGRID(dv,vmin,vmax,nbin,vout)
+// {F77} c     ---------------------------------------------------------------------------
+// {F77} c     Build histogram grid (i.e. vector of bins)
+// {F77} c     ---------------------------------------------------------------------------
+// {F77} c       dv : bin width
+// {F77} c     vmin : minumum value
+// {F77} c     vmax : maximum value
+// {F77} c     nbin : number of bins
+// {F77} c     vout : output vector of bins
+// {F77} c     ===========================================================================
+// {F77}       implicit none
+// {F77}       integer nbin,ibin,maxnbin
+// {F77}       parameter(maxnbin=5000)
+// {F77}       real*8 vout(maxnbin)
+// {F77}       real*8 vmin,vmax,x1,x2,dv
+// {F77} 
+// {F77}       ibin=1
+// {F77}       x1=vmin
+// {F77}       x2=vmin+dv
+// {F77}       do while (x2.le.vmax)
+// {F77}          vout(ibin)=0.5*(x1+x2)
+// {F77}          ibin=ibin+1
+// {F77}          x1=x1+dv
+// {F77}          x2=x2+dv
+// {F77}       enddo
+// {F77}       nbin=ibin-1
+// {F77}       return
+// {F77}       END
+
+void get_histgrid(double dv,double vmin,double vmax,int* nbin,double vout[]){
+    double x1,x2;
+    (*nbin) = 0;
+    x1=vmin;
+    x2=vmin+dv;
+    while(x2 < vmax){
+        vout[(*nbin)]=0.5*(x1+x2);
+        x1=x1+dv;
+        x2=x2+dv;
+        (*nbin)++;
+    }
+}   
+    
 
 using namespace std;
 
@@ -1093,29 +1122,41 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77} c     f_mu (SFH) & f_mu (IR)
 // {F77}          call get_histgrid(dfmu,fmu_min,fmu_max,nbin_fmu,fmu_hist)
+    get_histgrid(dfmu,fmu_min,fmu_max,&nbin_fmu,fmu_hist);
 // {F77} c     mu parameter
 // {F77}          call get_histgrid(dmu,mu_min,mu_max,nbin_mu,mu_hist)
+    get_histgrid(dmu,mu_min,mu_max,&nbin_mu,mu_hist);
 // {F77} c     tauv (dust optical depth)
 // {F77}          call get_histgrid(dtv,tv_min,tv_max,nbin_tv,tv_hist)
+    get_histgrid(dtv,tv_min,tv_max,&nbin_tv,tv_hist);
 // {F77} c     sSFR
 // {F77}          call get_histgrid(dssfr,ssfr_min,ssfr_max,nbin_ssfr,ssfr_hist)
+    get_histgrid(dssfr,ssfr_min,ssfr_max,&nbin_ssfr,ssfr_hist);
 // {F77} c     SFR
 // {F77}          call get_histgrid(dsfr,sfr_min,sfr_max,nbin_sfr,sfr_hist)
+    get_histgrid(dsfr,sfr_min,sfr_max,&nbin_sfr,sfr_hist);
 // {F77} c     Mstars
 // {F77}          call get_histgrid(da,a_min,a_max,nbin_a,a_hist)
+    get_histgrid(da,a_min,a_max,&nbin_a,a_hist);
 // {F77} c     Ldust
 // {F77}          call get_histgrid(dldust,ld_min,ld_max,nbin_ld,ld_hist)
+    get_histgrid(dldust,ld_min,ld_max,&nbin_ld,ld_hist);
 // {F77} c     fmu_ism
 // {F77}          call get_histgrid(dfmu_ism,fmuism_min,fmuism_max,nbin_fmu_ism,
 // {F77}      +        fmuism_hist)
+    get_histgrid(dfmu_ism,fmuism_min,fmuism_max,&nbin_fmu_ism,fmuism_hist);
 // {F77} c     T_BGs (ISM)
 // {F77}          call get_histgrid(dtbg,tbg1_min,tbg1_max,nbin_tbg1,tbg1_hist)
+    get_histgrid(dtbg,tbg1_min,tbg1_max,&nbin_tbg1,tbg1_hist);
 // {F77} c     T_BGs (BC)
 // {F77}          call get_histgrid(dtbg,tbg2_min,tbg2_max,nbin_tbg2,tbg2_hist)
+    get_histgrid(dtbg,tbg2_min,tbg2_max,&nbin_tbg2,tbg2_hist);
 // {F77} c     xi's (PAHs, VSGs, BGs)
 // {F77}          call get_histgrid(dxi,xi_min,xi_max,nbin_xi,xi_hist)
+    get_histgrid(dxi,xi_min,xi_max,&nbin_xi,xi_hist);
 // {F77} c     Mdust
 // {F77}          call get_histgrid(dmd,md_min,md_max,nbin_md,md_hist)
+    get_histgrid(dmd,md_min,md_max,&nbin_md,md_hist);
 // {F77} 
 // {F77} c     Compute histogram indexes for each parameter value
 // {F77} c     [makes code faster -- implemented by the Nottingham people]
@@ -1138,6 +1179,26 @@ int main(int argc, char *argv[]){
 // {F77}             aux=((lssfr(i_sfh)-ssfr_min)/(ssfr_max-ssfr_min))* nbin_ssfr
 // {F77}             i_lssfr(i_sfh) = 1 + dint(aux)
 // {F77}          enddo
+    for(i_sfh=0; i_sfh<n_sfh; i_sfh++){
+        aux=((fmu_sfh[i_sfh]-fmu_min)/(fmu_max-fmu_min)) * nbin_fmu;
+        i_fmu_sfh[i_sfh] = (int)(aux);
+        
+        aux =((mu[i_sfh]-mu_min)/(mu_max-mu_min)) * nbin_mu;
+        i_mu[i_sfh] = (int)(aux);
+        
+        aux=((tauv[i_sfh]-tv_min)/(tv_max-tv_min)) * nbin_tv;
+        i_tauv[i_sfh] = (int)(aux);
+        
+        aux=((tvism[i_sfh]-tv_min)/(tv_max-tv_min)) * nbin_tv;
+        i_tvism[i_sfh] = (int)(aux);
+        
+        if (lssfr[i_sfh] < ssfr_min){
+            lssfr[i_sfh]=ssfr_min;
+        }
+        
+        aux=((lssfr[i_sfh]-ssfr_min)/(ssfr_max-ssfr_min)) * nbin_ssfr;
+        i_lssfr[i_sfh] = (int)(aux);
+    }           
 // {F77} 
 // {F77}          do i_ir=1, n_ir
 // {F77}             aux=((fmu_ir(i_ir)-fmu_min)/(fmu_max-fmu_min)) * nbin_fmu
@@ -1162,6 +1223,30 @@ int main(int argc, char *argv[]){
 // {F77}             i_xi3(i_ir) = 1+dint(aux)
 // {F77}          enddo
 // {F77} 
+
+    for(i_ir=0; i_ir<n_ir; i_ir++){
+        aux=((fmu_ir[i_ir]-fmu_min)/(fmu_max-fmu_min)) * nbin_fmu;
+        i_fmu_ir[i_ir] = (int)(aux);
+
+        aux=((fmu_ism[i_ir]-fmuism_min)/(fmuism_max-fmuism_min))*nbin_fmu_ism;
+        i_fmu_ism[i_ir] = (int)(aux);
+
+        aux=((tbg1[i_ir]-tbg1_min)/(tbg1_max-tbg1_min))* nbin_tbg1;
+        i_tbg1[i_ir] = (int)(aux);
+
+        aux=((tbg2[i_ir]-tbg2_min)/(tbg2_max-tbg2_min))* nbin_tbg2;
+        i_tbg2[i_ir] = (int)(aux);
+
+        aux=((xi1[i_ir]-xi_min)/(xi_max-xi_min)) * nbin_xi;
+        i_xi1[i_ir] = (int)(aux);
+
+        aux=((xi2[i_ir]-xi_min)/(xi_max-xi_min)) * nbin_xi;
+        i_xi2[i_ir] = (int)(aux);
+
+        aux=((xi3[i_ir]-xi_min)/(xi_max-xi_min)) * nbin_xi;
+        i_xi3[i_ir] = (int)(aux);
+    }
+
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     HERE STARTS THE ACTUAL FIT
 // {F77} c
@@ -1185,6 +1270,8 @@ int main(int argc, char *argv[]){
 // {F77} c     ---------------------------------------------------------------------------
 // {F77}          write(*,*) 'Starting fit.......'
 // {F77}          DO i_sfh=1,n_sfh
+    cout << "Starting fit......." << endl;
+    for(i_sfh=0; i_sfh < n_sfh; i_sfh++){
 // {F77} c     Check progress of the fit...
 // {F77}             if (i_sfh.eq.(n_sfh/4)) then
 // {F77}                write (*,*) '25% done...', i_sfh, " / ", n_sfh, " opt. models"
@@ -1195,33 +1282,61 @@ int main(int argc, char *argv[]){
 // {F77}             else if (i_sfh/n_sfh.eq.1) then
 // {F77}                write (*,*) '100% done...', n_sfh, " opt. models - fit finished"
 // {F77}             endif
+        if ((i_sfh+1) == (n_sfh/4)){
+            cout << " 25% done... " << i_sfh+1 << "/" << n_sfh << " opt. models" << endl;
+        } else if((i_sfh+1) == (n_sfh/2)){
+            cout << " 50% done... " << i_sfh+1 << "/" << n_sfh << " opt. models" << endl;
+        } else if((i_sfh+1) == (3*n_sfh/4)){
+            cout << " 75% done... " << i_sfh+1 << "/" << n_sfh << " opt. models" << endl;
+        } else if((i_sfh+1)/n_sfh == 1){
+            cout << "100% done... " << n_sfh << " opt. models - fit finished" << endl;
+        }
+    
 // {F77} 
 // {F77}             df=0.15             !fmu_opt=fmu_ir +/- dfmu
+        df=0.15;
 // {F77} 
 // {F77} c     Search for the IR models with f_mu within the range set by df
 // {F77}             DO i_ir=1,n_ir
+            for(i_ir=0; i_ir<n_ir; i_ir++){
 // {F77} 
 // {F77}                num=0.
 // {F77}                den=0.
 // {F77}                chi2=0.
 // {F77}                chi2_opt=0.
 // {F77}                chi2_ir=0.
+                num=0;
+                den=0;
+                chi2=0;
+                chi2_opt=0;
+                chi2_ir=0;
 // {F77} 
 // {F77}                if (abs(fmu_sfh(i_sfh)-fmu_ir(i_ir)).le.df) then
+                    if(fabs(fmu_sfh[i_sfh]-fmu_ir[i_ir]) < df){
 // {F77} 
 // {F77}                   n_models=n_models+1 !to keep track of total number of combinations
+                        n_models=n_models+1;
 // {F77} 
 // {F77} c     Build the model flux array by adding SFH & IR
 // {F77}                   do k=1,nfilt_sfh-nfilt_mix
 // {F77}                      flux_mod(k)=flux_sfh(i_sfh,k)
 // {F77}                   enddo
+                        for(k=0; k < nfilt_sfh-nfilt_mix; k++){
+                            flux_mod[k]=flux_sfh[k][i_sfh];
+                        }
 // {F77}                   do k=nfilt_sfh-nfilt_mix+1,nfilt_sfh
 // {F77}                      flux_mod(k)=flux_sfh(i_sfh,k)+
 // {F77}      +                    ldust(i_sfh)*flux_ir(i_ir,k-nfilt_sfh+nfilt_mix) !k-(nfilt_sfh-nfilt_mix)
 // {F77}                   enddo
+                        for(k=nfilt_sfh-nfilt_mix; k<nfilt_sfh; k++){
+                            flux_mod[k]=flux_sfh[k][i_sfh]+ldust[i_sfh]*flux_ir[k-nfilt_sfh+nfilt_mix][i_ir];
+                        }
 // {F77}                   do k=nfilt_sfh+1,nfilt
 // {F77}                      flux_mod(k)=ldust(i_sfh)*flux_ir(i_ir,k-nfilt_sfh+nfilt_mix)
 // {F77}                   enddo
+                        for(k=nfilt_sfh; k<nfilt; k++){
+                            flux_mod[k]=ldust[i_sfh]*flux_ir[k-nfilt_sfh+nfilt_mix][i_ir];
+                        }
 // {F77} c     Compute scaling factor "a" - this is the number that minimizes chi^2
 // {F77}                   do k=1,nfilt
 // {F77}                      if (flux_obs(i_gal,k).gt.0) then
