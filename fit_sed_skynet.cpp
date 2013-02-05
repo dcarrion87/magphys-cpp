@@ -116,7 +116,7 @@ double get_dl(double h,double q,double z){
     bool success;
     int npts;
     
-    if(z < 0){
+    if(z <= 0){
         return (1.0e-5);
     }
 
@@ -178,42 +178,12 @@ void sort2(double arr[], int left, int right) {
         sort2(arr, i, right);
 }
 
-// {F77} c     ===========================================================================
-// {F77}       SUBROUTINE GET_HISTGRID(dv,vmin,vmax,nbin,vout)
-// {F77} c     ---------------------------------------------------------------------------
-// {F77} c     Build histogram grid (i.e. vector of bins)
-// {F77} c     ---------------------------------------------------------------------------
-// {F77} c       dv : bin width
-// {F77} c     vmin : minumum value
-// {F77} c     vmax : maximum value
-// {F77} c     nbin : number of bins
-// {F77} c     vout : output vector of bins
-// {F77} c     ===========================================================================
-// {F77}       implicit none
-// {F77}       integer nbin,ibin,maxnbin
-// {F77}       parameter(maxnbin=5000)
-// {F77}       real*8 vout(maxnbin)
-// {F77}       real*8 vmin,vmax,x1,x2,dv
-// {F77} 
-// {F77}       ibin=1
-// {F77}       x1=vmin
-// {F77}       x2=vmin+dv
-// {F77}       do while (x2.le.vmax)
-// {F77}          vout(ibin)=0.5*(x1+x2)
-// {F77}          ibin=ibin+1
-// {F77}          x1=x1+dv
-// {F77}          x2=x2+dv
-// {F77}       enddo
-// {F77}       nbin=ibin-1
-// {F77}       return
-// {F77}       END
-
 void get_histgrid(double dv,double vmin,double vmax,int* nbin,double vout[]){
     double x1,x2;
     (*nbin) = 0;
     x1=vmin;
     x2=vmin+dv;
-    while(x2 < vmax){
+    while(x2 <= vmax){
         vout[(*nbin)]=0.5*(x1+x2);
         x1=x1+dv;
         x2=x2+dv;
@@ -228,7 +198,7 @@ using namespace std;
 int main(int argc, char *argv[]){
 // Mimic output to that of fortran write.
     cout.precision(15);
-    cout.setf(ios::scientific);
+   // cout.setf(ios::scientific);
 
 // {F77}       implicit none
 // {F77}       integer isave,i,j,k,i_gal,io,largo
@@ -254,11 +224,11 @@ int main(int argc, char *argv[]){
 // {F77}       character*30 gal_name(galmax),aux_name
    static char gal_name[GALMAX][30],aux_name[30];
 // {F77}       character*6 numz
-   static char numz[6];
+   static char numz[7];
 // {F77}       character optlib*34,irlib*26
-   static char optlib[34],irlib[26];
+   static char optlib[35],irlib[27];
 // {F77}       character filters*80,obs*80
-   static char filters[80],obs[80];
+   static char filters[81],obs[81];
 // {F77} c     redshift libs
 // {F77}       integer nz,nzmax
    static int nz;
@@ -754,9 +724,10 @@ int main(int argc, char *argv[]){
 // {F77}       write(*,*) 'z= ',redshift(i_gal)
 // {F77}       write(*,*) 'optlib=',optlib
 // {F77}       write(*,*) 'irlib=',irlib
-    sprintf(numz, "%.4f",zlib[0]);
-    sprintf(optlib, "starformhist_cb07_z%s.lbr",numz);
-    sprintf(irlib, "infrared_dce08_z%s.lbr",numz);
+
+    snprintf(numz, 7, "%f6.4",zlib[0]);
+    snprintf(optlib, 35, "starformhist_cb07_z%s.lbr",numz);
+    snprintf(irlib, 27, "infrared_dce08_z%s.lbr",numz);
 
     cout << "z = " << redshift[i_gal] << endl;
     cout << "optlib = " << optlib << endl;
@@ -800,7 +771,7 @@ int main(int argc, char *argv[]){
             kfilt_ir[nfilt_ir]=i;
             nfilt_ir++;
         }
-        if (lambda_rest[i] > 2.5 && lambda_rest[i] < 10){
+        if (lambda_rest[i] > 2.5 && lambda_rest[i] <= 10){
             nfilt_mix++;
         }
     }
@@ -1312,7 +1283,7 @@ int main(int argc, char *argv[]){
                 chi2_ir=0;
 // {F77} 
 // {F77}                if (abs(fmu_sfh(i_sfh)-fmu_ir(i_ir)).le.df) then
-                    if(fabs(fmu_sfh[i_sfh]-fmu_ir[i_ir]) < df){
+                    if(fabs(fmu_sfh[i_sfh]-fmu_ir[i_ir]) <= df){
 // {F77} 
 // {F77}                   n_models=n_models+1 !to keep track of total number of combinations
                         n_models=n_models+1;
@@ -1345,6 +1316,13 @@ int main(int argc, char *argv[]){
 // {F77}                      endif
 // {F77}                   enddo
 // {F77}                   a=num/den
+                        for(k=0; k<nfilt; k++){
+                            if(flux_obs[k][i_gal] > 0) {
+                                num=num+(flux_mod[k]*flux_obs[k][i_gal]*w[k][i_gal]);
+                                den=den+(pow(flux_mod[k],2)*w[k][i_gal]);
+                            }
+                        }
+                        a=num/den;
 // {F77} c     Compute chi^2 goodness-of-fit
 // {F77}                   do k=1,nfilt_sfh
 // {F77}                      if (flux_obs(i_gal,k).gt.0) then
@@ -1353,6 +1331,12 @@ int main(int argc, char *argv[]){
 // {F77}                         chi2_opt=chi2
 // {F77}                      endif
 // {F77}                   enddo
+                        for(k=0;k<nfilt_sfh;k++){
+                            if(flux_obs[k][i_gal] > 0){
+                                chi2=chi2+((pow(flux_obs[k][i_gal]-(a*flux_mod[k]),2))*w[k][i_gal]);
+                                chi2_opt=chi2;
+                            }
+                        }
 // {F77} 
 // {F77}                   if (chi2.lt.600.) then
 // {F77}                      do k=nfilt_sfh+1,nfilt
@@ -1364,9 +1348,19 @@ int main(int argc, char *argv[]){
 // {F77}                         endif
 // {F77}                      enddo
 // {F77}                   endif
+                        if(chi2 < 600){
+                            for(k=nfilt_sfh;k<nfilt;k++){
+                                if (flux_obs[k][i_gal] > 0){
+                                    chi2=chi2+((pow(flux_obs[k][i_gal]-(a*flux_mod[k]),2))*w[k][i_gal]);
+                                    chi2_ir=chi2_ir+((pow(flux_obs[k][i_gal]-(a*flux_mod[k]),2))*w[k][i_gal]);
+                                }
+                            }
+                        }
 // {F77} c     Probability
 // {F77}                   prob=dexp(-0.5*chi2)
 // {F77}                   ptot=ptot+prob
+                        prob=exp(-0.5*chi2);
+                        ptot=ptot+prob;
 // {F77} c     Best fit model
 // {F77}                   chi2_new=chi2
 // {F77}                   chi2_new_opt=chi2_opt
@@ -1379,6 +1373,18 @@ int main(int argc, char *argv[]){
 // {F77}                      chi2_sav_opt=chi2_new_opt
 // {F77}                      chi2_sav_ir=chi2_new_ir
 // {F77}                   endif
+                        
+                        chi2_new=chi2;
+                        chi2_new_opt=chi2_opt;
+                        chi2_new_ir=chi2_ir;
+                        if(chi2_new < chi2_sav){
+                            chi2_sav=chi2_new;
+                            sfh_sav=i_sfh;
+                            ir_sav=i_ir;
+                            a_sav=a;
+                            chi2_sav_opt=chi2_new_opt;
+                            chi2_sav_ir=chi2_new_ir;
+                        }
 // {F77} 
 // {F77} c     MARGINAL PROBABILITY DENSITY FUNCTIONS
 // {F77} c     Locate each value on the corresponding histogram bin
@@ -1390,78 +1396,137 @@ int main(int argc, char *argv[]){
 // {F77}                   ibin= i_fmu_sfh(i_sfh)
 // {F77}                   ibin = max(1,min(ibin,nbin_fmu))
 // {F77}                   psfh(ibin)=psfh(ibin)+prob
+                        ibin=i_fmu_sfh[i_sfh];
+                        ibin=max(1,min(ibin,nbin_fmu));
+                        psfh[ibin]=psfh[ibin]+prob;
 // {F77} c     f_mu (IR)
 // {F77}                   ibin = i_fmu_ir(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_fmu))
 // {F77}                   pir(ibin)=pir(ibin)+prob
+                        ibin=i_fmu_ir[i_ir];
+                        ibin = max(1,min(ibin,nbin_fmu));
+                        pir[ibin]=pir[ibin]+prob;
 // {F77} c     mu
 // {F77}                   ibin= i_mu(i_sfh)
 // {F77}                   ibin = max(1,min(ibin,nbin_mu))
 // {F77}                   pmu(ibin)=pmu(ibin)+prob
+                        ibin=i_mu[i_sfh];
+                        ibin=max(1,min(ibin,nbin_mu));
+                        pmu[ibin]=pmu[ibin]+prob;
 // {F77} c     tauV
 // {F77}                   ibin= i_tauv(i_sfh)
 // {F77}                   ibin = max(1,min(ibin,nbin_tv))
 // {F77}                   ptv(ibin)=ptv(ibin)+prob
+                        ibin=i_tauv[i_sfh];
+                        ibin=max(1,min(ibin,nbin_tv));
+                        ptv[ibin]=ptv[ibin]+prob;
 // {F77} c     tvism
 // {F77}                   ibin= i_tvism(i_sfh)
 // {F77}                   ibin = max(1,min(ibin,nbin_tv))
 // {F77}                   ptvism(ibin)=ptvism(ibin)+prob
+                        ibin=i_tvism[i_sfh];
+                        ibin=max(1,min(ibin,nbin_tv));
+                        ptvism[ibin]=ptvism[ibin]+prob;
 // {F77} c     sSFR_0.1Gyr
 // {F77}                   ibin= i_lssfr(i_sfh)
 // {F77}                   ibin = max(1,min(ibin,nbin_sfr))
 // {F77}                   pssfr(ibin)=pssfr(ibin)+prob
+                        ibin=i_lssfr[i_sfh];
+                        ibin=max(1,min(ibin,nbin_sfr));
+                        pssfr[ibin]=pssfr[ibin]+prob;
 // {F77} c     Mstar
 // {F77}                   a=dlog10(a)
 // {F77}                   aux=((a-a_min)/(a_max-a_min)) * nbin_a
 // {F77}                   ibin=1+dint(aux)
 // {F77}                   ibin = max(1,min(ibin,nbin_a))
 // {F77}                   pa(ibin)=pa(ibin)+prob
+                        a=log10(a);
+                        aux=((a-a_min)/(a_max-a_min)) * nbin_a;
+                        ibin=(int)(aux);
+                        ibin=max(1,min(ibin,nbin_a));
+                        pa[ibin]=pa[ibin]+prob;
 // {F77} c     SFR_0.1Gyr
 // {F77}                   aux=((lssfr(i_sfh)+a-sfr_min)/(sfr_max-sfr_min))
 // {F77}      +                 * nbin_sfr
 // {F77}                   ibin= 1+dint(aux)
 // {F77}                   ibin = max(1,min(ibin,nbin_sfr))
 // {F77}                   psfr(ibin)=psfr(ibin)+prob
+                        aux=((lssfr[i_sfh]+a-sfr_min)/(sfr_max-sfr_min))* nbin_sfr;
+                        ibin=(int)(aux);
+                        ibin=max(1,min(ibin,nbin_sfr));
+                        psfr[ibin]=psfr[ibin]+prob;
 // {F77} c     Ldust
 // {F77}                   aux=((logldust(i_sfh)+a-ld_min)/(ld_max-ld_min))
 // {F77}      +                 * nbin_ld
 // {F77}                   ibin=1+dint(aux)
 // {F77}                   ibin = max(1,min(ibin,nbin_ld))
 // {F77}                   pldust(ibin)=pldust(ibin)+prob
+                        aux=((logldust[i_sfh]+a-ld_min)/(ld_max-ld_min))* nbin_ld;
+                        ibin=(int)(aux);
+                        ibin=max(1,min(ibin,nbin_ld));
+                        pldust[ibin]=pldust[ibin]+prob;
+                        
 // {F77} c     xi_C^tot
 // {F77}                   ibin= i_fmu_ism(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_fmu_ism))
 // {F77}                   pism(ibin)=pism(ibin)+prob
+                       ibin=i_fmu_ism[i_ir];
+                       ibin=max(1,min(ibin,nbin_fmu_ism));
+                       pism[ibin]=pism[ibin]+prob;
 // {F77} c     T_C^ISM
 // {F77}                   ibin= i_tbg1(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_tbg1))
 // {F77}                   ptbg1(ibin)=ptbg1(ibin)+prob
+                       ibin=i_tbg1[i_ir];
+                       ibin=max(1,min(ibin,nbin_tbg1));
+                       ptbg1[ibin]=ptbg1[ibin]+prob;
 // {F77} c     T_W^BC
 // {F77}                   ibin= i_tbg2(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_tbg2))
 // {F77}                   ptbg2(ibin)=ptbg2(ibin)+prob
+                       ibin=i_tbg2[i_ir];
+                       ibin=max(1,min(ibin,nbin_tbg2));
+                       ptbg2[ibin]=ptbg2[ibin]+prob;
 // {F77} c     xi_PAH^tot
 // {F77}                   ibin= i_xi1(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_xi))
 // {F77}                   pxi1(ibin)=pxi1(ibin)+prob
+                       ibin=i_xi1[i_ir];
+                       ibin=max(1,min(ibin,nbin_xi));
+                       pxi1[ibin]=pxi1[ibin]+prob;
 // {F77} c     xi_MIR^tot
 // {F77}                   ibin= i_xi2(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_xi))
 // {F77}                   pxi2(ibin)=pxi2(ibin)+prob
+                       ibin=i_xi2[i_ir];
+                       ibin=max(1,min(ibin,nbin_xi));
+                       pxi2[ibin]=pxi2[ibin]+prob;
 // {F77} c     xi_W^tot
 // {F77}                   ibin= i_xi3(i_ir)
 // {F77}                   ibin = max(1,min(ibin,nbin_xi))
 // {F77}                   pxi3(ibin)=pxi3(ibin)+prob
+                       ibin=i_xi3[i_ir];
+                       ibin=max(1,min(ibin,nbin_xi));
+                       pxi3[ibin]=pxi3[ibin]+prob;
 // {F77} c     Mdust
 // {F77}                   lmdust(i_ir)=dlog10(mdust(i_ir)*ldust(i_sfh)*10.0**a)
 // {F77}                   aux=((lmdust(i_ir)-md_min)/(md_max-md_min))*nbin_md
 // {F77}                   ibin=1+dint(aux)
 // {F77}                   ibin = max(1,min(ibin,nbin_md))
 // {F77}                   pmd(ibin)=pmd(ibin)+prob
+                       lmdust[i_ir]=log10(mdust[i_ir]*ldust[i_sfh]*pow(10.0,a));
+                       aux=((lmdust[i_ir]-md_min)/(md_max-md_min))*nbin_md;
+                       ibin=(int)(aux);
+                       ibin=max(1,min(ibin,nbin_md));
+                       pmd[ibin]=pmd[ibin]+prob;
 // {F77} 
 // {F77}                endif            !df condition
 // {F77}             ENDDO               !loop in i_ir
 // {F77}          ENDDO                  !loop in i_sfh
+                    }
+                        
+            }
+    }
 // {F77} 
 // {F77} c     Chi2-weighted models: normalize to total probability ptot
 // {F77}          write(*,*) 'Number of random SFH models:       ', n_sfh
@@ -1471,6 +1536,13 @@ int main(int argc, char *argv[]){
 // {F77}          write(*,*) 'ptot= ',ptot
 // {F77}          write(*,*) 'chi2_optical= ',chi2_sav_opt
 // {F77}          write(*,*) 'chi2_infrared= ',chi2_sav_ir
+    cout << "      Number of random SFH models: " << n_sfh << endl;
+    cout << "Number of IR dust emission models: " << n_ir << endl;
+    cout << "                      Value of df: " << df << endl;
+    cout << "           Total number of models: " << n_models << endl;
+    cout << "                             ptot: " << ptot << endl;
+    cout << "                     chi2_optical: " << chi2_sav_opt << endl;
+    cout << "                    chi2_infrared: " << chi2_sav_ir << endl;
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     Compute percentiles of the (normalized) likelihood distributions
