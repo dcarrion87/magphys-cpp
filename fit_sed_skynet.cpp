@@ -227,7 +227,7 @@ int main(int argc, char *argv[]){
 // {F77}       character*6 numz
    static char numz[6];
 // {F77}       character optlib*34,irlib*26
-   static char optilib[34],irlib[26];
+   static char optlib[34],irlib[26];
 // {F77}       character filters*80,obs*80
    static char filters[80],obs[80];
 // {F77} c     redshift libs
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]){
 // {F77}       real*8 fprop_ir(nmod,nprop_ir),fmu_ir(nmod)
    static double fprop_ir[NPROP_IR][NMOD],fmu_ir[NMOD];
 // {F77}       real*8 ldust(nmod),mstr1(nmod),logldust(nmod),lssfr(nmod)
-   static double ldust[NMOD],mstr1[NMOD],logldust[NMOD],lssft[NMOD];
+   static double ldust[NMOD],mstr1[NMOD],logldust[NMOD],lssfr[NMOD];
 // {F77}       real*8 flux_ir(nmod,nmax),tvism(nmod),tauv(nmod),mu(nmod)
    static double flux_ir[NMAX][NMOD],tvism[NMOD],tauv[NMOD],mu[NMOD];
 // {F77}       real*8 tbg1(nmod),tbg2(nmod),xi1(nmod),xi2(nmod),xi3(nmod)
@@ -268,7 +268,7 @@ int main(int argc, char *argv[]){
 // {F77}       real*8 a,num,den,a_sav
    static double a,num,den,a_sav;
 // {F77}       real*8 ptot,prob,chi2_new_opt,chi2_new_ir
-   static double ptot,prop,chi2_new_opt,chi2_new_ir;
+   static double ptot,prob,chi2_new_opt,chi2_new_ir;
 // {F77}       real*8 chi2_opt,chi2_ir,chi2_sav_opt,chi2_sav_ir
    static double chi2_opt,chi2_ir,chi2_sav_opt,chi2_sav_ir;
 // {F77} c     histograms
@@ -452,7 +452,8 @@ int main(int argc, char *argv[]){
         skynet = true;
 // {F77}           call getarg ( 1, arg )
 // {F77}           read( arg, *) i_gal
-        i_gal = atoi(argv[1]);
+        // We subtract 1 from i_gal to suit C standard array indexing.
+        i_gal = atoi(argv[1])-1;
 // {F77}           call getarg( 2, filters)
         strcpy(filters,argv[2]);
 // {F77}           call getarg( 3, obs)
@@ -600,14 +601,14 @@ int main(int argc, char *argv[]){
     if(!skynet){
         // TODO: Take input
     }
-    cout << i_gal << "\t" << n_obs << endl;
+    cout << i_gal+1 << "\t" << n_obs << endl;
 // {F77} 
 // {F77} c     Do we have the observation
 // {F77}       if (i_gal .gt. n_obs) then
 // {F77}          write(*,*) 'Observation does not exist'
 // {F77}          call EXIT(0)
 // {F77}       endif
-    if(i_gal > n_obs){
+    if(i_gal+1 > n_obs){
         cerr << "Observation does not exist" << endl;
         exit(-1);
     }
@@ -686,7 +687,7 @@ int main(int argc, char *argv[]){
     if (!skynet){
         // TODO : Handle manual
     } else {
-        sprintf(outfile1, "%d.fit",i_gal);
+        sprintf(outfile1, "%d.fit",i_gal+1);
         ofs.open(outfile1);
         if(!ofs.is_open()){
             cerr << "Could not open fit file: " << outfile1 << endl;
@@ -722,14 +723,14 @@ int main(int argc, char *argv[]){
 // {F77}       irlib = 'infrared_dce08_z'//numz//'.lbr'
 // {F77} 
 // {F77}       write(*,*) 'z= ',redshift(i_gal)
-// {F77}       write(*,*) 'optilib=',optlib
+// {F77}       write(*,*) 'optlib=',optlib
 // {F77}       write(*,*) 'irlib=',irlib
     sprintf(numz, "%.4f",zlib[0]);
-    sprintf(optilib, "starformhist_cb07_z%s.lbr",numz);
+    sprintf(optlib, "starformhist_cb07_z%s.lbr",numz);
     sprintf(irlib, "infrared_dce08_z%s.lbr",numz);
 
     cout << "z = " << redshift[i_gal] << endl;
-    cout << "optilib = " << optilib << endl;
+    cout << "optlib = " << optlib << endl;
     cout << "irlib = " << irlib <<endl;
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
@@ -759,6 +760,23 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77}          write(*,*) '   '
 // {F77}          write(*,*) 'At this redshift: '
+    nfilt_sfh = nfilt_ir = nfilt_mix = 0;
+    for(i=0; i<nfilt; i++){
+        lambda_rest[i] = lambda_eff[i]/(1+redshift[i_gal]);
+        if(lambda_rest[i] < 10){
+            kfilt_sfh[nfilt_sfh]=i;
+            nfilt_sfh++;
+        }
+        if(lambda_rest[i] > 2.5){
+            kfilt_ir[nfilt_ir]=i;
+            nfilt_ir++;
+        }
+        if (lambda_rest[i] > 2.5 && lambda_rest[i] < 10){
+            nfilt_mix++;
+        }
+    }
+    cout << "   " << endl;   
+    cout << "At this redshift: " << endl;
 // {F77} 
 // {F77}          do k=1,nfilt_sfh-nfilt_mix
 // {F77}             write(*,*) 'purely stellar... ',filt_name(k)
@@ -769,6 +787,16 @@ int main(int argc, char *argv[]){
 // {F77}          do k=nfilt_sfh+1,nfilt
 // {F77}             write(*,*) 'purely dust... ',filt_name(k)
 // {F77}          enddo
+    for(k=0; k < (nfilt_sfh-nfilt_mix); k++){
+        cout << "purely stellar... " << filt_name[k] << endl;
+    }
+
+    for(k=nfilt_sfh-nfilt_mix; k < nfilt_sfh; k++){
+        cout << "mix stars+dust... " << filt_name[k] << endl;
+    }
+    for(k=nfilt_sfh; k < nfilt; k++){
+        cout << "purely dust... " << filt_name[k] << endl;
+    }
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     MODELS: read libraries of models with parameters + AB mags at z
@@ -780,6 +808,7 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77}          if (isave.eq.0) then
 // {F77}             io=0
+    if(isave == 0){
 // {F77} 
 // {F77} c     READ OPTLIB
 // {F77}             close(21)
@@ -819,6 +848,46 @@ int main(int argc, char *argv[]){
 // {F77}             enddo
 // {F77}             close(21)
 // {F77}             n_sfh=i_sfh-1
+        infs.open(optlib);
+        if(!infs.is_open()){
+            cerr << "Failed to open SFH library: " << optlib << endl;
+            exit(-1);
+        }
+        cout << "Reading SFH library..." << endl;
+        n_sfh=0;
+        while(getline(infs,line)){
+            if(line[0] != '#'){
+               ss.str("");
+               ss.clear();
+               ss << line;
+               ss >> indx[n_sfh]; 
+               for(j=0; j < NPROP_SFH; j++){
+                    ss >> fprop_sfh[j][n_sfh];
+               }
+               for(j=0; j < nfilt_sfh; j++){
+                    ss >> flux_sfh[j][n_sfh];
+               }
+
+               // We need to subtract array index by 1 due to fortran difference.
+               fmu_sfh[n_sfh]=fprop_sfh[22-1][n_sfh];
+               mstr1[n_sfh]=fprop_sfh[6-1][n_sfh]; 
+               ldust[n_sfh]=fprop_sfh[21-1][n_sfh]/mstr1[n_sfh];
+               logldust[n_sfh]=log10(ldust[n_sfh]);
+               mu[n_sfh]=fprop_sfh[5-1][n_sfh];
+               tauv[n_sfh]=fprop_sfh[4-1][n_sfh]; 
+               ssfr[n_sfh]=fprop_sfh[10-1][n_sfh]/mstr1[n_sfh];
+               lssfr[n_sfh]=log10(ssfr[n_sfh]);
+               tvism[n_sfh]=mu[n_sfh]*tauv[n_sfh];
+
+               for(k=0; k < nfilt_sfh; k++){
+                 flux_sfh[k][n_sfh]=3.117336e+6*pow(10,-0.4*(flux_sfh[k][n_sfh]+48.6));
+                 flux_sfh[k][n_sfh]=flux_sfh[k][n_sfh]/mstr1[n_sfh];
+                 flux_sfh[k][n_sfh]=flux_sfh[k][n_sfh]/(1+redshift[i_gal]);
+               }
+               n_sfh++;
+            }
+        }
+        infs.close();
 // {F77} 
 // {F77} c     READ IRLIB
 // {F77}             close(20)
@@ -861,8 +930,54 @@ int main(int argc, char *argv[]){
 // {F77}  201        format(0p7f12.3,1pe12.3,1p14e12.3,1p3e12.3)
 // {F77}             close(20)
 // {F77}             n_ir=i_ir-1
+        infs.open(irlib);
+        if(!infs.is_open()){
+            cerr << "Failed to open IR dust emission library: " << irlib << endl;
+            exit(-1);
+        }
+        cout << "Reading IR dust emission library..." << endl;
+        n_ir=0;
+        while(getline(infs,line)){
+            if(line[0] != '#'){
+               ss.str("");
+               ss.clear();
+               ss << line;
+               for(j=0; j < NPROP_IR; j++){
+                    ss >> fprop_ir[j][n_ir];
+               }
+               for(j=0; j < nfilt_ir; j++){
+                    ss >> flux_ir[j][n_ir];
+               }
+
+               // We need to subtract array index by 1 due to fortran difference.
+               fmu_ir[n_ir]=fprop_ir[1-1][n_ir];
+               fmu_ism[n_ir]=fprop_ir[2-1][n_ir];
+               tbg2[n_ir]=fprop_ir[4-1][n_ir];
+               tbg1[n_ir]=fprop_ir[3-1][n_ir];
+               xi1[n_ir]=fprop_ir[5-1][n_ir];
+               xi2[n_ir]=fprop_ir[6-1][n_ir];
+               xi3[n_ir]=fprop_ir[7-1][n_ir];
+               mdust[n_ir]=fprop_ir[8-1][n_ir];
+               
+               for(k=0; k < nfilt_ir; k++){
+                 flux_ir[k][n_ir]=3.117336e+6*pow(10,-0.4*(flux_ir[k][n_ir]+48.6));
+                 flux_ir[k][n_ir]=flux_ir[k][n_ir]/(1+redshift[i_gal]);
+               }
+
+               xi1[n_ir]=xi1[n_ir]*(1-fmu_ir[n_ir])+0.550*(1-fmu_ism[n_ir])*fmu_ir[n_ir];
+               xi2[n_ir]=xi2[n_ir]*(1-fmu_ir[n_ir])+0.275*(1-fmu_ism[n_ir])*fmu_ir[n_ir];
+               xi3[n_ir]=xi3[n_ir]*(1-fmu_ir[n_ir])+0.175*(1-fmu_ism[n_ir])*fmu_ir[n_ir];
+               fmu_ism[n_ir]=fmu_ism[n_ir]*fmu_ir[n_ir]; 
+
+               n_ir++;
+            }
+        }
+        infs.close();
 // {F77}             isave=1
 // {F77}          endif
+        isave=1;
+    }
+    
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     COMPARISON BETWEEN MODELS AND OBSERVATIONS:
@@ -896,6 +1011,21 @@ int main(int argc, char *argv[]){
 // {F77}                w(i_gal,k) = 1.0 / (sigma(i_gal,k)**2)
 // {F77}             endif
 // {F77}          enddo
+    for(k=0; k<nfilt; k++){
+        if (flux_obs[k][i_gal] > 0){
+            flux_obs[k][i_gal]=flux_obs[k][i_gal]*1.0e-23*3.283608731e-33*pow(dist[i_gal],2);
+            sigma[k][i_gal]=sigma[k][i_gal]*1.0e-23*3.283608731e-33*pow(dist[i_gal],2);
+        } 
+        if (sigma[k][i_gal] < 0.05*flux_obs[k][i_gal]){
+            sigma[k][i_gal]=0.05*flux_obs[k][i_gal];
+        }
+    }
+    for(k=0; k<nfilt; k++){
+        if (sigma[k][i_gal] > 0.0){
+            w[k][i_gal] = 1.0/(pow(sigma[k][i_gal],2));
+        }
+    }
+    
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     Initialize variables:
@@ -906,6 +1036,13 @@ int main(int argc, char *argv[]){
 // {F77}          do k=1,nfilt
 // {F77}             flux_mod(k)=0.
 // {F77}          enddo
+    n_models=0;
+    chi2_sav=1.0e30;
+    ptot=0;
+    prob=0;
+    for(k=0; k<nfilt; k++){
+        flux_mod[k]=0;
+    }
 // {F77} 
 // {F77} c theSkyNet do i=1,1500
 // {F77}          do i=1,3000
@@ -926,6 +1063,24 @@ int main(int argc, char *argv[]){
 // {F77}             pxi3(i)=0.
 // {F77}             pmd(i)=0.
 // {F77}          enddo
+    for(i=0; i<3000; i++){
+        psfh[i]=0;
+        pir[i]=0;
+        pmu[i]=0;
+        ptv[i]=0;
+        ptvism[i]=0;
+        pssfr[i]=0;
+        psfr[i]=0;
+        pa[i]=0;
+        pldust[i]=0;
+        ptbg1[i]=0;
+        ptbg2[i]=0;
+        pism[i]=0;
+        pxi1[i]=0;
+        pxi2[i]=0;
+        pxi3[i]=0;
+        pmd[i]=0;
+    }      
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     Compute histogram grids of the parameter likelihood distributions before
