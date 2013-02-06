@@ -2190,7 +2190,7 @@ int main(int argc, char *argv[]){
 // {F77}          enddo
     fprintf(fitfp,"# ... SFR_0.1Gyr ...\n");
     for(ibin=0; ibin<nbin2_sfr; ibin++){
-        fprintf(fitfp,"%10.4f%12.3E\n",sfr2_hist[ibin],psfr2[ibin]);
+        fprintf(fitfp,"%12.3E%12.3E\n",sfr2_hist[ibin],psfr2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_sfr(k),k=1,5)
@@ -2224,7 +2224,7 @@ int main(int argc, char *argv[]){
 // {F77}      +           fmu_sfh(sfh_sav),redshift(i_gal),outfile2)
     if(skynet){
         fprintf(fitfp," #...theSkyNet parameters of this model\n");
-        fprintf(fitfp,"%10i%10i%20.6E%20.4E%10.2E\n",indx[sfh_sav],ir_sav+1,a_sav,fmu_sfh[sfh_sav],redshift[i_gal]);
+        fprintf(fitfp,"%15i%15i%20.5E%20.3E%10.1E\n",indx[sfh_sav],ir_sav+1,a_sav,fmu_sfh[sfh_sav],redshift[i_gal]);
     } else {
         // TODO : Imlement best fit.
     }
