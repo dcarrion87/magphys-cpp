@@ -65,132 +65,19 @@
 #define NBINMAX2 300
 #define MIN_HPBV 0.00001
 
+//Function prototypes for old FORTRAN functions.
+double get_cosmol_c(double h,double omega,double omega_lambda,double* q);
+double get_funl(double x);
+void get_midpnt(double (*func)(double),double a,double b,double* s,double n);
+double get_dl(double h,double q,double z);
+void sort2(double arr1[],double arr2[], int left, int right);
+void get_histgrid(double dv,double vmin,double vmax,int* nbin,double vout[]);
+void get_percentiles(int n,double par[],double probability[],double percentile[]);
+void degrade_hist(double delta,double min,double max,int nbin1,int * nbin2,double hist1[], double hist2[],double prob1[],double prob2[]);
+double get_hpbv(double hist1[],double hist2[],int nbin);
+
 // TODO : Bad! Get rid of this eventually.
 static double omega0;
-
-// Returns cosmological constant = cosmol_c and parameter q
-double get_cosmol_c(double h,double omega,double omega_lambda,double* q){
-    if(omega_lambda == 0){
-        *q=omega/2;
-    }else{
-        *q=(3*omega/2)-1;
-    }
-    return (omega_lambda/(3*h*h));
-}
-
-// Replaces FORTRAN function FUNL
-double get_funl(double x){
-    double omegainv;
-    omegainv = 1/omega0;
-    return (1/sqrt(((x*x*x) + omegainv)-1));
-}
-
-// Replaces FORTRAN function MIDPNT
-void get_midpnt(double (*func)(double),double a,double b,double* s,double n){
-    int it,j;
-    double ddel,del,sum,tnm,x;
-    if(n == 1){
-        (*s)=(b-a)*((*func)(0.5*(a+b)));
-    } else{
-        it=pow(3,(n-2));
-        tnm=it;
-        del=(b-a)/(3*tnm);
-        ddel=del+del;
-        x=a+0.5*del;
-        sum=0;
-        for(j=0; j < it;j++){
-            sum=sum+((*func)(x));
-            x=x+ddel;
-            sum=sum+((*func)(x));
-            x=x+del;
-        }
-        (*s)=((*s)+(b-a)*sum/tnm)/3;
-    }
-}
-
-// Replaces FORTRAN function DL
-double get_dl(double h,double q,double z){
-    double dl, d1, d2;
-    double aa,bb,epsr,s,s0;
-    double dd1,dd2;
-    bool success;
-    int npts;
-    
-    if(z <= 0){
-        return (1.0e-5);
-    }
-
-    if(q == 0){
-        dl = ((3.0e5 * z)*(1 + (z/2)))/h;
-    } else if (q > 0){
-        d1 = (q*z)+((q-1)*(sqrt(1+((2*q)*z))-1));
-        d2 = ((h*q)*q)/3.0e5;
-        dl = d1/d2; 
-    } else if(q < 0){
-        omega0 = (2*(q+1))/3;
-        aa = 1;
-        bb = 1+z;
-        success=false;
-        s0=1.0e-10;
-        npts=0;
-        do{
-            npts++;
-            get_midpnt(get_funl,aa,bb,&s,npts);
-            epsr=fabs(s-s0)/s0;
-            if(epsr < 1.0e-4){
-                success=true;
-            } else {
-                s0=s;
-            }
-        }while(!success);
-        dd1=s;
-        dd2=(3.0e5 * (1+z))/(h*sqrt(omega0));
-        dl=dd1*dd2;
-    }
-    return dl;
-}
-
-
-// Replacement quicksort algorithm
-void sort2(double arr[], int left, int right) {
-    int i = left;
-    int j = right;
-    double temp;
-    double pivot = arr[(left + right) / 2];
-  
-    while (i <= j) {
-        while (arr[i] < pivot)
-            i++;
-            while (arr[j] > pivot)
-                j--;
-            if (i <= j) {
-               temp = arr[i];
-               arr[i] = arr[j];
-               arr[j] = temp;
-               i++;
-               j--;
-        }
-    };
-  
-    if (left < j)
-        sort2(arr, left, j);
-    if (i < right)
-        sort2(arr, i, right);
-}
-
-void get_histgrid(double dv,double vmin,double vmax,int* nbin,double vout[]){
-    double x1,x2;
-    (*nbin) = 0;
-    x1=vmin;
-    x2=vmin+dv;
-    while(x2 <= vmax){
-        vout[(*nbin)]=0.5*(x1+x2);
-        x1=x1+dv;
-        x2=x2+dv;
-        (*nbin)++;
-    }
-}   
-    
 
 using namespace std;
 
@@ -332,7 +219,7 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77} c     The highest probability bin values
 // {F77}        real*8 hpbv, get_hpbv
-   static double hpbv, get_hpbv;
+   static double hpbv;
 // {F77}        real*8 min_hpbv
 // {F77}        parameter(min_hpbv = 0.00001)
 // {F77} c theSkyNet
@@ -703,8 +590,7 @@ int main(int argc, char *argv[]){
         diffz[i]=fabs(zlib[i]-redshift[i_gal]);
     }
 // {F77}       call sort2(nz,diffz,zlib)
-    sort2(diffz,0,nz-1);
-    sort2(zlib,0,nz-1);
+    sort2(diffz,zlib,0,nz-1);
 // {F77} c     diff(1): minimum difference
 // {F77} c     zlib(1): library z we use for this galaxy
 // {F77} c              (if diffz(1) not gt 0.005)
@@ -1566,6 +1452,24 @@ int main(int argc, char *argv[]){
 // {F77}             pxi3(i)=pxi3(i)/ptot
 // {F77}             pmd(i)=pmd(i)/ptot
 // {F77}          enddo
+    for(i=0; i<3000; i++){
+        psfh[i]=psfh[i]/ptot;
+        pir[i]=pir[i]/ptot;
+        pmu[i]=pmu[i]/ptot;
+        ptv[i]=ptv[i]/ptot;
+        ptvism[i]=ptvism[i]/ptot;
+        psfr[i]=psfr[i]/ptot;
+        pssfr[i]=pssfr[i]/ptot;
+        pa[i]=pa[i]/ptot;
+        pldust[i]=pldust[i]/ptot;
+        pism[i]=pism[i]/ptot;
+        ptbg1[i]=ptbg1[i]/ptot;
+        ptbg2[i]=ptbg2[i]/ptot;
+        pxi1[i]=pxi1[i]/ptot;
+        pxi2[i]=pxi2[i]/ptot;
+        pxi3[i]=pxi3[i]/ptot;
+        pmd[i]=pmd[i]/ptot;
+    }
 // {F77} 
 // {F77}          call get_percentiles(nbin_fmu,fmu_hist,psfh,pct_fmu_sfh)
 // {F77}          call get_percentiles(nbin_fmu,fmu_hist,pir,pct_fmu_ir)
@@ -1583,6 +1487,22 @@ int main(int argc, char *argv[]){
 // {F77}          call get_percentiles(nbin_xi,xi_hist,pxi2,pct_xi2)
 // {F77}          call get_percentiles(nbin_xi,xi_hist,pxi3,pct_xi3)
 // {F77}          call get_percentiles(nbin_md,md_hist,pmd,pct_md)
+    get_percentiles(nbin_fmu,fmu_hist,psfh,pct_fmu_sfh);
+    get_percentiles(nbin_fmu,fmu_hist,pir,pct_fmu_ir);
+    get_percentiles(nbin_mu,mu_hist,pmu,pct_mu);
+    get_percentiles(nbin_tv,tv_hist,ptv,pct_tv);
+    get_percentiles(nbin_tv,tv_hist,ptvism,pct_tvism);
+    get_percentiles(nbin_ssfr,ssfr_hist,pssfr,pct_ssfr);
+    get_percentiles(nbin_sfr,sfr_hist,psfr,pct_sfr);
+    get_percentiles(nbin_a,a_hist,pa,pct_mstr);
+    get_percentiles(nbin_ld,ld_hist,pldust,pct_ld);
+    get_percentiles(nbin_fmu_ism,fmuism_hist,pism,pct_ism);
+    get_percentiles(nbin_tbg1,tbg1_hist,ptbg1,pct_tbg1);
+    get_percentiles(nbin_tbg2,tbg2_hist,ptbg2,pct_tbg2);
+    get_percentiles(nbin_xi,xi_hist,pxi1,pct_xi1);
+    get_percentiles(nbin_xi,xi_hist,pxi2,pct_xi2);
+    get_percentiles(nbin_xi,xi_hist,pxi3,pct_xi3);
+    get_percentiles(nbin_md,md_hist,pmd,pct_md);
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     Degrade the resolution od the likelihood distribution histograms
@@ -1606,6 +1526,24 @@ int main(int argc, char *argv[]){
 // {F77}             pxi3_2(i)=0.
 // {F77}             pmd_2(i)=0.
 // {F77}          enddo
+    for(i=0;i<100;i++){
+        psfh2[i]=0;
+        pir2[i]=0;
+        pmu2[i]=0;
+        ptv2[i]=0;
+        ptvism2[i]=0;
+        pssfr2[i]=0;
+        psfr2[i]=0;
+        pa2[i]=0;
+        pldust2[i]=0;
+        pism2[i]=0;
+        ptbg1_2[i]=0;
+        ptbg2_2[i]=0;
+        pxi1_2[i]=0;
+        pxi2_2[i]=0;
+        pxi3_2[i]=0;
+        pmd_2[i]=0;
+    }
 // {F77} 
 // {F77} c     New histogram parameters
 // {F77}          dfmu=0.05
@@ -1622,10 +1560,27 @@ int main(int argc, char *argv[]){
 // {F77}          ssfr_min=-13.0
 // {F77}          ssfr_max=-6.0
 // {F77}          dsfr=0.10
+    dfmu=0.05;
+    fmu_min=0;
+    fmu_max=1;
+    dfmu_ism=0.05;
+    fmuism_min=0;
+    fmuism_max=1;
+    dtv=0.125;
+    dtvism=0.075;
+    tv_min=0;
+    tv_max=6;
+    dssfr=0.10;
+    ssfr_min=-13.0;
+    ssfr_max=-6.0;
+    dsfr=0.10;
 // {F77} c theSkyNet sfr_min=-3.
 // {F77}          sfr_min=-8.
 // {F77}          sfr_max=3.
 // {F77}          da=0.10
+    sfr_min=-8;
+    sfr_max=3;
+    da=0.10;
 // {F77} c theSkyNet a_min=7.0
 // {F77}          a_min=2.0
 // {F77}          a_max=13.0
@@ -1636,9 +1591,20 @@ int main(int argc, char *argv[]){
 // {F77}          tbg1_max=60.
 // {F77}          dxi=0.05
 // {F77}          dmd=0.10
+    a_min=2.0;
+    a_max=13.0;
+    dtbg=1;
+    tbg2_min=15;
+    tbg2_max=25;
+    tbg1_min=30;
+    tbg1_max=60;
+    dxi=0.05;
+    dmd=0.10;
 // {F77} c theSkyNet md_min=3.
 // {F77}          md_min=-2.
 // {F77}          md_max=9.
+    md_min=-2;
+    md_max=9;
 // {F77} 
 // {F77}          call degrade_hist(dfmu,fmu_min,fmu_max,nbin_fmu,nbin2_fmu,
 // {F77}      +        fmu_hist,fmu2_hist,psfh,psfh2)
@@ -1675,19 +1641,51 @@ int main(int argc, char *argv[]){
 // {F77}      +        xi_hist,xi2_hist,pxi3,pxi3_2)
 // {F77}          call degrade_hist(dmd,md_min,md_max,nbin_md,nbin2_md,
 // {F77}      +        md_hist,md2_hist,pmd,pmd_2)
+    degrade_hist(dfmu,fmu_min,fmu_max,nbin_fmu,&nbin2_fmu,fmu_hist,fmu2_hist,psfh,psfh2);
+    degrade_hist(dfmu,fmu_min,fmu_max,nbin_fmu,&nbin2_fmu,fmu_hist,fmu2_hist,pir,pir2);
+    degrade_hist(dfmu,fmu_min,fmu_max,nbin_mu,&nbin2_mu,mu_hist,mu2_hist,pmu,pmu2);
+    degrade_hist(dtv,tv_min,tv_max,nbin_tv,&nbin2_tv,tv_hist,tv2_hist,ptv,ptv2);
+    degrade_hist(dtvism,tv_min,tv_max,nbin_tv,&nbin2_tvism,tv_hist,tvism2_hist,ptvism,ptvism2);
+    degrade_hist(dssfr,ssfr_min,ssfr_max,nbin_ssfr,&nbin2_ssfr,ssfr_hist,ssfr2_hist,pssfr,pssfr2);
+    degrade_hist(dsfr,sfr_min,sfr_max,nbin_sfr,&nbin2_sfr,sfr_hist,sfr2_hist,psfr,psfr2);
+    degrade_hist(da,a_min,a_max,nbin_a,&nbin2_a,a_hist,a2_hist,pa,pa2);
+    degrade_hist(da,a_min,a_max,nbin_ld,&nbin2_ld,ld_hist,ld2_hist,pldust,pldust2);
+    degrade_hist(dfmu_ism,fmuism_min,fmuism_max,nbin_fmu_ism,&nbin2_fmu_ism,fmuism_hist,fmuism2_hist,pism,pism2);
+    degrade_hist(dtbg,tbg1_min,tbg1_max,nbin_tbg1,&nbin2_tbg1,tbg1_hist,tbg1_2_hist,ptbg1,ptbg1_2);
+    degrade_hist(dtbg,tbg2_min,tbg2_max,nbin_tbg2,&nbin2_tbg2,tbg2_hist,tbg2_2_hist,ptbg2,ptbg2_2);
+    degrade_hist(dxi,fmu_min,fmu_max,nbin_xi,&nbin2_xi,xi_hist,xi2_hist,pxi1,pxi1_2);
+    degrade_hist(dxi,fmu_min,fmu_max,nbin_xi,&nbin2_xi,xi_hist,xi2_hist,pxi2,pxi2_2);
+    degrade_hist(dxi,fmu_min,fmu_max,nbin_xi,&nbin2_xi,xi_hist,xi2_hist,pxi3,pxi3_2);
+    degrade_hist(dmd,md_min,md_max,nbin_md,&nbin2_md,md_hist,md2_hist,pmd,pmd_2);
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
 // {F77} c     Store fit results in .fit output file
 // {F77} c     ---------------------------------------------------------------------------
 // {F77}          write(31,702)
 // {F77}  702     format('# OBSERVED FLUXES (and errors):')
+    ofs << "# OBSERVED FLUXES (and errors):" << endl;
 // {F77}          write(filter_header,*) (filt_name(k),k=1,nfilt)
-// {F77}          write(31,*) '#  '//filter_header(1:largo(filter_header))
+// {F77}          write(31,*) '#  '//filter_header(1:largo(filter_header))    
+    ofs << " #  ";
+    for(k=0;k<nfilt;k++){
+        ofs << filt_name[k] << " ";
+    }
+    ofs << endl;
 // {F77} 
 // {F77}          write(31,701) (flux_obs(i_gal,k),k=1,nfilt)
 // {F77}          write(31,701) (sigma(i_gal,k),k=1,nfilt)
 // {F77}          write(31,703)
 // {F77}  703     format('#')
+   for(k=0;k<nfilt;k++){
+       ofs << " " << flux_obs[k][i_gal];
+   }
+   ofs << endl;
+   for(k=0;k<nfilt;k++){
+       ofs << " " << sigma[k][i_gal];
+   }
+   ofs << endl;
+   ofs << "#" << endl;
+  
 // {F77} 
 // {F77}          write(31,800)
 // {F77}  800     format('# ... Results of fitting the fluxes to the model.....')
@@ -1698,13 +1696,24 @@ int main(int argc, char *argv[]){
 // {F77}      +        '.......Mdust.....SFR')
 // {F77}  803     format(0p4f10.3,1p3e12.3,0p2f10.1,0p5f10.3,1p2e12.3)
 // {F77} 
+   ofs << "# ... Results of fitting the fluxes to the model....." << endl;
+
 // {F77}          write(31,703)
+   ofs << "#" << endl;
 // {F77}          write(31,804)
 // {F77}  804     format('# BEST FIT MODEL: (i_sfh, i_ir, chi2, redshift)')
+   ofs << "# BEST FIT MODEL: (i_sfh, i_ir, chi2, redshift)" << endl;
 // {F77}          write(31,311) indx(sfh_sav),ir_sav,chi2_sav/n_flux,
 // {F77}      +        redshift(i_gal)
 // {F77}  311     format(2i10,0pf10.3,0pf12.6)
+    // Adding 1 to ir_sav to get total number
+   ofs << " " << indx[sfh_sav] << " " << ir_sav+1 << " " << chi2_sav/n_flux << " " << redshift[i_gal]<< endl;
 // {F77}          write(31,802)
+   ofs << "#.fmu(SFH)...fmu(IR)........mu......tauv";
+   ofs << "........sSFR..........M*.......Ldust";
+   ofs << "......T_W^BC.....T_C^ISM....xi_C^tot";
+   ofs << "..xi_PAH^tot..xi_MIR^tot....xi_W^tot.....tvism";
+   ofs << ".......Mdust.....SFR" << endl;
 // {F77}          write(31,803) fmu_sfh(sfh_sav),fmu_ir(ir_sav),mu(sfh_sav),
 // {F77}      +        tauv(sfh_sav),ssfr(sfh_sav),a_sav,
 // {F77}      +        ldust(sfh_sav)*a_sav,tbg1(ir_sav),tbg2(ir_sav),
@@ -1713,19 +1722,46 @@ int main(int argc, char *argv[]){
 // {F77}      +        tvism(sfh_sav),mdust(ir_sav)*a_sav*ldust(sfh_sav),
 // {F77}      +        ssfr(sfh_sav)*a_sav
 // {F77} 
+   ofs << " " << fmu_sfh[sfh_sav] << " " << fmu_ir[ir_sav] << " " << mu[sfh_sav];
+   ofs << " " << tauv[sfh_sav] << " " << ssfr[sfh_sav] << " " << a_sav;
+   ofs << " " << ldust[sfh_sav]*a_sav << " " << tbg1[ir_sav] << " " << tbg2[ir_sav];
+   ofs << " " << fmu_ism[ir_sav] << " " << xi1[ir_sav];
+   ofs << " " << xi2[ir_sav] << " " << xi3[ir_sav];
+   ofs << " " << tvism[sfh_sav] << " " << mdust[ir_sav]*a_sav*ldust[sfh_sav];
+   ofs << " " << ssfr[sfh_sav]*a_sav << endl;
 // {F77}          write(31,*) '#  '//filter_header(1:largo(filter_header))
+    ofs << " #  ";
+    for(k=0;k<nfilt;k++){
+        ofs << filt_name[k] << " ";
+    }
+    ofs << endl;
+
 // {F77}          write(31,701) (a_sav*flux_sfh(sfh_sav,k),k=1,nfilt_sfh-nfilt_mix),
 // {F77}      +        (a_sav*(flux_sfh(sfh_sav,k)
 // {F77}      +        +flux_ir(ir_sav,k-nfilt_sfh+nfilt_mix)*ldust(sfh_sav)),
 // {F77}      +        k=nfilt_sfh-nfilt_mix+1,nfilt_sfh),
 // {F77}      +        (a_sav*flux_ir(ir_sav,k-nfilt_sfh+nfilt_mix)*ldust(sfh_sav),
 // {F77}      +        k=nfilt_sfh+1,nfilt)
+    for(k=0;k<nfilt_sfh-nfilt_mix;k++){
+       ofs << " " << a_sav*flux_sfh[k][sfh_sav];
+    }
+    for(k=nfilt_sfh-nfilt_mix; k<nfilt_sfh; k++){
+       ofs << " " << a_sav*flux_sfh[k][sfh_sav]+flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav];
+    }
+    for(k=nfilt_sfh;k<nfilt;k++){
+       ofs << " " << a_sav*flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav];
+    }
+    ofs << endl;
 // {F77}  701     format(1p50e12.3)
 // {F77} 
+
 // {F77}          write(31,703)
 // {F77}          write(31,805)
 // {F77}  805     format('# MARGINAL PDF HISTOGRAMS FOR EACH PARAMETER......')
 // {F77} 
+    ofs << "#" << endl;
+    ofs << "# MARGINAL PDF HISTOGRAMS FOR EACH PARAMETER......" << endl;    
+
 // {F77}  807     format(0pf10.4,1pe12.3e3)
 // {F77}  60      format('#....percentiles of the PDF......')
 // {F77}  61      format(0p5f8.3)
@@ -1742,12 +1778,26 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmu2_hist(ibin),psfh2(ibin)
 // {F77}          enddo
+    ofs << "# ... f_mu (SFH) ..." << endl;
+    for(ibin=0; ibin<nbin2_fmu; ibin++){
+        ofs << " " << fmu2_hist[ibin] << " " << psfh2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_fmu_sfh(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_fmu_sfh[k];
+    }
+    ofs << endl;
+
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(psfh2, fmu2_hist, nbin2_fmu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmu2_hist(1), fmu2_hist(nbin2_fmu), fmu2_hist(2) - fmu2_hist(1)
+    hpbv = get_hpbv(psfh2,fmu2_hist,nbin2_fmu);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << fmu2_hist[0] << " " << fmu2_hist[nbin2_fmu-1];
+    ofs << " " << fmu2_hist[1] - fmu2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,808)
@@ -1756,12 +1806,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmu2_hist(ibin),pir2(ibin)
 // {F77}          enddo
+    ofs << "# ... f_mu (IR) ..." << endl;
+    for(ibin=0; ibin<nbin2_fmu; ibin++){
+        ofs << " " << fmu2_hist[ibin] << " " << pir2[ibin] << endl;
+    }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_fmu_ir(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_fmu_ir[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pir2, fmu2_hist, nbin2_fmu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmu2_hist(1), fmu2_hist(nbin2_fmu), fmu2_hist(2) - fmu2_hist(1)
+    hpbv = get_hpbv(pir2,fmu2_hist,nbin2_fmu);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << fmu2_hist[0] << " " << fmu2_hist[nbin2_fmu-1];
+    ofs << " " << fmu2_hist[1] - fmu2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,809)
@@ -1770,12 +1833,26 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) mu2_hist(ibin),pmu2(ibin)
 // {F77}          enddo
+    ofs << "# ... mu parameter ..." << endl;
+    for(ibin=0; ibin<nbin2_mu; ibin++){
+        ofs << " " << mu2_hist[ibin] << " " << pmu2[ibin] << endl;
+    }    
+
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_mu(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_mu[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pmu2, mu2_hist, nbin2_mu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, mu2_hist(1), mu2_hist(nbin2_mu), mu2_hist(2) - mu2_hist(1)
+    hpbv = get_hpbv(pmu2,mu2_hist,nbin2_mu);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << mu2_hist[0] << " " << mu2_hist[nbin2_mu-1];
+    ofs << " " << mu2_hist[1] - mu2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,810)
@@ -1784,12 +1861,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tv2_hist(ibin),ptv2(ibin)
 // {F77}          enddo
+    ofs << "# ... tau_V ..." << endl;
+    for(ibin=0; ibin<nbin2_tv; ibin++){
+        ofs << " " << tv2_hist[ibin] << " " << ptv2[ibin] << endl;
+    }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tv(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_tv[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tv2_hist(1), tv2_hist(nbin2_tv), tv2_hist(2) - tv2_hist(1)
+    hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << tv2_hist[0] << " " << tv2_hist[nbin2_tv-1];
+    ofs << " " << tv2_hist[1] - tv2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,811)
@@ -1798,13 +1888,29 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) ssfr2_hist(ibin),pssfr2(ibin)
 // {F77}          enddo
+    ofs << "# ... sSFR_0.1Gyr ..." << endl;
+    for(ibin=0; ibin<nbin2_ssfr; ibin++){
+        ofs << " " << ssfr2_hist[ibin] << " " << pssfr2[ibin] << endl;
+    }
+}
+// {F77}         
 // {F77}  812     format(1p2e12.3e3)
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_ssfr(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_ssfr[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pssfr2, ssfr2_hist, nbin2_ssfr)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, ssfr2_hist(1), ssfr2_hist(nbin2_ssfr), ssfr2_hist(2) - ssfr2_hist(1)
+    hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << tv2_hist[0] << " " << tv2_hist[nbin2_tv-1];
+    ofs << " " << tv2_hist[1] - tv2_hist[0] << endl;
+    
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,813)
@@ -1999,6 +2105,22 @@ int main(int argc, char *argv[]){
 // {F77}       enddo
 // {F77}       RETURN
 // {F77}       END
+double get_hpbv(double hist1[],double hist2[],int nbin){
+    int ibin;
+    double max_pr;
+    double hpbv;
+    for(ibin=0;ibin<nbin;ibin++){
+        if(ibin == 0){
+            max_pr = hist1[ibin];
+            hpbv = hist2[ibin];
+        }else if(hist1[ibin] > max_pr){
+            max_pr = hist1[ibin];
+            hpbv = hist2[ibin];
+        }
+    }
+    return hpbv;
+}
+            
 // {F77} c theSkyNet
 // {F77} 
 // {F77} c     ===========================================================================
@@ -2038,6 +2160,23 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77}       RETURN
 // {F77}       END
+void degrade_hist(double delta,double min,double max,int nbin1,int * nbin2,double hist1[], double hist2[],double prob1[],double prob2[]){
+    int i=0;
+    int ibin=0;
+    int maxnbin2=200;
+    double max2=0;
+    double aux;
+    
+    max2=max+(delta/2);
+    
+    get_histgrid(delta,min,max2,nbin2,hist2);
+    for(i=0;i<nbin1;i++){
+        aux=((hist1[i]-min)/(max-min))*(*nbin2);
+        ibin=(int)(aux);
+        prob2[ibin]=prob2[ibin]+prob1[i];
+    }
+}
+   
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       SUBROUTINE GET_HISTGRID(dv,vmin,vmax,nbin,vout)
@@ -2068,6 +2207,18 @@ int main(int argc, char *argv[]){
 // {F77}       nbin=ibin-1
 // {F77}       return
 // {F77}       END
+void get_histgrid(double dv,double vmin,double vmax,int* nbin,double vout[]){
+    double x1,x2;
+    (*nbin) = 0;
+    x1=vmin;
+    x2=vmin+dv;
+    while(x2 <= vmax){
+        vout[(*nbin)]=0.5*(x1+x2);
+        x1=x1+dv;
+        x2=x2+dv;
+        (*nbin)++;
+    }
+}   
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       SUBROUTINE GET_PERCENTILES(n,par,probability,percentile)
@@ -2105,6 +2256,25 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77}       return
 // {F77}       END
+void get_percentiles(int n,double par[],double probability[],double percentile[]){
+    int i=0;
+    double pless=0;
+    int n_perc[5];
+    double limit[5]={0.025,0.16,0.50,0.84,0.975};
+    sort2(par,probability,0,n-1);
+    
+   for(i=0; i<5; i++){
+       n_perc[i]=0;
+       pless=0;
+       while(pless <= limit[i]){
+           pless=pless+probability[n_perc[i]];
+           n_perc[i]++;
+       }
+       n_perc[i]=n_perc[i]-1;
+       percentile[i]=par[n_perc[i]];
+   }
+}
+  
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       SUBROUTINE sort2(n,arr,brr)
@@ -2205,6 +2375,34 @@ int main(int argc, char *argv[]){
 // {F77}       endif
 // {F77}       goto 1
 // {F77}       END
+void sort2(double arr1[], double arr2[], int left, int right) {
+    int i = left;
+    int j = right;
+    double temp1,temp2;
+    double pivot = arr1[(left + right) / 2];
+  
+    while (i <= j) {
+        while (arr1[i] < pivot)
+            i++;
+            while (arr1[j] > pivot)
+                j--;
+            if (i <= j) {
+               temp1 = arr1[i];
+               temp2 = arr2[i];
+               arr1[i] = arr1[j];
+               arr2[i] = arr2[j];
+               arr1[j] = temp1;
+               arr2[j] = temp2;
+               i++;
+               j--;
+        }
+    };
+  
+    if (left < j)
+        sort2(arr1,arr2,left,j);
+    if (i < right)
+        sort2(arr1,arr2,i,right);
+}
 // {F77} 
 // {F77} 
 // {F77} c     ===========================================================================
@@ -2259,6 +2457,46 @@ int main(int argc, char *argv[]){
 // {F77} 
 // {F77}       return
 // {F77}       end
+double get_dl(double h,double q,double z){
+    double dl, d1, d2;
+    double aa,bb,epsr,s,s0;
+    double dd1,dd2;
+    bool success;
+    int npts;
+    
+    if(z <= 0){
+        return (1.0e-5);
+    }
+
+    if(q == 0){
+        dl = ((3.0e5 * z)*(1 + (z/2)))/h;
+    } else if (q > 0){
+        d1 = (q*z)+((q-1)*(sqrt(1+((2*q)*z))-1));
+        d2 = ((h*q)*q)/3.0e5;
+        dl = d1/d2; 
+    } else if(q < 0){
+        omega0 = (2*(q+1))/3;
+        aa = 1;
+        bb = 1+z;
+        success=false;
+        s0=1.0e-10;
+        npts=0;
+        do{
+            npts++;
+            get_midpnt(get_funl,aa,bb,&s,npts);
+            epsr=fabs(s-s0)/s0;
+            if(epsr < 1.0e-4){
+                success=true;
+            } else {
+                s0=s;
+            }
+        }while(!success);
+        dd1=s;
+        dd2=(3.0e5 * (1+z))/(h*sqrt(omega0));
+        dl=dd1*dd2;
+    }
+    return dl;
+}
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       REAL*8 FUNCTION FUNL(x)
@@ -2271,6 +2509,11 @@ int main(int argc, char *argv[]){
 // {F77}       funl = 1. / sqrt(((x ** 3.) + omegainv) - 1.)
 // {F77}       return
 // {F77}       end
+double get_funl(double x){
+    double omegainv;
+    omegainv = 1/omega0;
+    return (1/sqrt(((x*x*x) + omegainv)-1));
+}
 // {F77} 
 // {F77} 
 // {F77} c     ===========================================================================
@@ -2300,6 +2543,27 @@ int main(int argc, char *argv[]){
 // {F77}       endif
 // {F77}       return
 // {F77}       END
+void get_midpnt(double (*func)(double),double a,double b,double* s,double n){
+    int it,j;
+    double ddel,del,sum,tnm,x;
+    if(n == 1){
+        (*s)=(b-a)*((*func)(0.5*(a+b)));
+    } else{
+        it=pow(3,(n-2));
+        tnm=it;
+        del=(b-a)/(3*tnm);
+        ddel=del+del;
+        x=a+0.5*del;
+        sum=0;
+        for(j=0; j < it;j++){
+            sum=sum+((*func)(x));
+            x=x+ddel;
+            sum=sum+((*func)(x));
+            x=x+del;
+        }
+        (*s)=((*s)+(b-a)*sum/tnm)/3;
+    }
+}
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       REAL*8 FUNCTION COSMOL_C(h,omega,omega_lambda,q)
@@ -2321,6 +2585,14 @@ int main(int argc, char *argv[]){
 // {F77}       endif
 // {F77}       return
 // {F77}       end
+double get_cosmol_c(double h,double omega,double omega_lambda,double* q){
+    if(omega_lambda == 0){
+        *q=omega/2;
+    }else{
+        *q=(3*omega/2)-1;
+    }
+    return (omega_lambda/(3*h*h));
+}
 // {F77} 
 // {F77} c     ===========================================================================
 // {F77}       REAL*8 FUNCTION T(h, q, z, lamb)
@@ -2652,4 +2924,3 @@ int main(int argc, char *argv[]){
 // {F77}                      end
 // {F77} 
 // {F77} 
-}
