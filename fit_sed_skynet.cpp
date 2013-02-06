@@ -420,7 +420,7 @@ int main(int argc, char *argv[]){
 // {F77}       do i=1,1
 // {F77}          read(20,*)
 // {F77}       enddo
-// {F77}       io=0
+// {F77}       io=0stringstream format
 // {F77}       n_obs=0
 // {F77}       do while(io.eq.0)
 // {F77}          n_obs=n_obs+1
@@ -569,16 +569,17 @@ int main(int argc, char *argv[]){
 // {F77}           write(31, *) '####### ',gal_name(i_gal)
 // {F77}       endif
     strcpy(aux_name,gal_name[i_gal]);
-    ofstream ofs;
+    FILE * fitfp;
+
     if (!skynet){
         // TODO : Handle manual
     } else {
         sprintf(outfile1, "%d.fit",i_gal+1);
-        ofs.open(outfile1);
-        if(!ofs.is_open()){
+        fitfp = fopen(outfile1,"w");
+        if(!fitfp){
             cerr << "Could not open fit file: " << outfile1 << endl;
         }
-        ofs << " ####### " << gal_name[i_gal] << endl;
+        fprintf(fitfp," ####### %s\n",gal_name[i_gal]);
     }
 // {F77} 
 // {F77} c     Choose libraries according to the redshift of the source
@@ -1662,30 +1663,31 @@ int main(int argc, char *argv[]){
 // {F77} c     Store fit results in .fit output file
 // {F77} c     ---------------------------------------------------------------------------
 // {F77}          write(31,702)
-// {F77}  702     format('# OBSERVED FLUXES (and errors):')
-    ofs << "# OBSERVED FLUXES (and errors):" << endl;
+// {F77}  702     format('# OBSERVED FLUXES (and errors):')   
+    fprintf(fitfp,"# OBSERVED FLUXES (and errors):\n");
 // {F77}          write(filter_header,*) (filt_name(k),k=1,nfilt)
 // {F77}          write(31,*) '#  '//filter_header(1:largo(filter_header))    
-    ofs << " #  ";
+    fprintf(fitfp," #  ");
     for(k=0;k<nfilt;k++){
-        ofs << filt_name[k] << " ";
+        fprintf(fitfp," %s ",filt_name[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} 
 // {F77}          write(31,701) (flux_obs(i_gal,k),k=1,nfilt)
 // {F77}          write(31,701) (sigma(i_gal,k),k=1,nfilt)
 // {F77}          write(31,703)
 // {F77}  703     format('#')
    for(k=0;k<nfilt;k++){
-       ofs << " " << flux_obs[k][i_gal];
+       fprintf(fitfp,"%12.3E",flux_obs[k][i_gal]);
    }
-   ofs << endl;
+   fprintf(fitfp,"\n");
    for(k=0;k<nfilt;k++){
-       ofs << " " << sigma[k][i_gal];
+       fprintf(fitfp,"%12.3E",sigma[k][i_gal]);
    }
-   ofs << endl;
-   ofs << "#" << endl;
-  
+   fprintf(fitfp,"\n");
+   fprintf(fitfp,"#\n");
+
+
 // {F77} 
 // {F77}          write(31,800)
 // {F77}  800     format('# ... Results of fitting the fluxes to the model.....')
@@ -1696,24 +1698,25 @@ int main(int argc, char *argv[]){
 // {F77}      +        '.......Mdust.....SFR')
 // {F77}  803     format(0p4f10.3,1p3e12.3,0p2f10.1,0p5f10.3,1p2e12.3)
 // {F77} 
-   ofs << "# ... Results of fitting the fluxes to the model....." << endl;
-
+   fprintf(fitfp,"# ... Results of fitting the fluxes to the model.....\n");
 // {F77}          write(31,703)
-   ofs << "#" << endl;
+   fprintf(fitfp,"#\n");
 // {F77}          write(31,804)
 // {F77}  804     format('# BEST FIT MODEL: (i_sfh, i_ir, chi2, redshift)')
-   ofs << "# BEST FIT MODEL: (i_sfh, i_ir, chi2, redshift)" << endl;
+   fprintf(fitfp,"# BEST FIT MODEL: (i_sfh, i_ir, chi2, redshift)\n");
 // {F77}          write(31,311) indx(sfh_sav),ir_sav,chi2_sav/n_flux,
 // {F77}      +        redshift(i_gal)
 // {F77}  311     format(2i10,0pf10.3,0pf12.6)
     // Adding 1 to ir_sav to get total number
-   ofs << " " << indx[sfh_sav] << " " << ir_sav+1 << " " << chi2_sav/n_flux << " " << redshift[i_gal]<< endl;
+   
+   fprintf(fitfp," %10i %10i %10.3f %12.6f\n",indx[sfh_sav],ir_sav+1,chi2_sav/n_flux,redshift[i_gal]);
 // {F77}          write(31,802)
-   ofs << "#.fmu(SFH)...fmu(IR)........mu......tauv";
-   ofs << "........sSFR..........M*.......Ldust";
-   ofs << "......T_W^BC.....T_C^ISM....xi_C^tot";
-   ofs << "..xi_PAH^tot..xi_MIR^tot....xi_W^tot.....tvism";
-   ofs << ".......Mdust.....SFR" << endl;
+   fprintf(fitfp,"#.fmu(SFH)...fmu(IR)........mu......tauv");;
+   fprintf(fitfp,"........sSFR..........M*.......Ldust");
+   fprintf(fitfp,"......T_W^BC.....T_C^ISM....xi_C^tot");
+   fprintf(fitfp,"..xi_PAH^tot..xi_MIR^tot....xi_W^tot.....tvism");
+   fprintf(fitfp,".......Mdust.....SFR");
+   fprintf(fitfp,"\n");
 // {F77}          write(31,803) fmu_sfh(sfh_sav),fmu_ir(ir_sav),mu(sfh_sav),
 // {F77}      +        tauv(sfh_sav),ssfr(sfh_sav),a_sav,
 // {F77}      +        ldust(sfh_sav)*a_sav,tbg1(ir_sav),tbg2(ir_sav),
@@ -1722,20 +1725,19 @@ int main(int argc, char *argv[]){
 // {F77}      +        tvism(sfh_sav),mdust(ir_sav)*a_sav*ldust(sfh_sav),
 // {F77}      +        ssfr(sfh_sav)*a_sav
 // {F77} 
-   ofs << " " << fmu_sfh[sfh_sav] << " " << fmu_ir[ir_sav] << " " << mu[sfh_sav];
-   ofs << " " << tauv[sfh_sav] << " " << ssfr[sfh_sav] << " " << a_sav;
-   ofs << " " << ldust[sfh_sav]*a_sav << " " << tbg1[ir_sav] << " " << tbg2[ir_sav];
-   ofs << " " << fmu_ism[ir_sav] << " " << xi1[ir_sav];
-   ofs << " " << xi2[ir_sav] << " " << xi3[ir_sav];
-   ofs << " " << tvism[sfh_sav] << " " << mdust[ir_sav]*a_sav*ldust[sfh_sav];
-   ofs << " " << ssfr[sfh_sav]*a_sav << endl;
+   fprintf(fitfp," %10.3f %10.3f %10.3f %10.3f %12.3E %12.3E %12.3E %10.1f %10.1f %10.3f %10.3f %10.3f %10.3f %10.3f %12.3E %12.3E",
+           fmu_sfh[sfh_sav],fmu_ir[ir_sav],mu[sfh_sav],
+           tauv[sfh_sav],ssfr[sfh_sav],a_sav,ldust[sfh_sav]*a_sav,
+           tbg1[ir_sav],tbg2[ir_sav],fmu_ism[ir_sav],xi1[ir_sav],
+           xi2[ir_sav],xi3[ir_sav],tvism[sfh_sav],
+           mdust[ir_sav]*a_sav*ldust[sfh_sav],ssfr[sfh_sav]*a_sav);
+   fprintf(fitfp,"\n");
 // {F77}          write(31,*) '#  '//filter_header(1:largo(filter_header))
-    ofs << " #  ";
+    fprintf(fitfp," #  ");
     for(k=0;k<nfilt;k++){
-        ofs << filt_name[k] << " ";
+        fprintf(fitfp," %s ",filt_name[k]);
     }
-    ofs << endl;
-
+    fprintf(fitfp,"\n");
 // {F77}          write(31,701) (a_sav*flux_sfh(sfh_sav,k),k=1,nfilt_sfh-nfilt_mix),
 // {F77}      +        (a_sav*(flux_sfh(sfh_sav,k)
 // {F77}      +        +flux_ir(ir_sav,k-nfilt_sfh+nfilt_mix)*ldust(sfh_sav)),
@@ -1743,15 +1745,15 @@ int main(int argc, char *argv[]){
 // {F77}      +        (a_sav*flux_ir(ir_sav,k-nfilt_sfh+nfilt_mix)*ldust(sfh_sav),
 // {F77}      +        k=nfilt_sfh+1,nfilt)
     for(k=0;k<nfilt_sfh-nfilt_mix;k++){
-       ofs << " " << a_sav*flux_sfh[k][sfh_sav];
+       fprintf(fitfp," %12.3E ",a_sav*flux_sfh[k][sfh_sav]);
     }
     for(k=nfilt_sfh-nfilt_mix; k<nfilt_sfh; k++){
-       ofs << " " << a_sav*flux_sfh[k][sfh_sav]+flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav];
+       fprintf(fitfp," %12.3E ",a_sav*flux_sfh[k][sfh_sav]+flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav]);
     }
     for(k=nfilt_sfh;k<nfilt;k++){
-       ofs << " " << a_sav*flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav];
+       fprintf(fitfp," %12.3E ",a_sav*flux_ir[k-nfilt_sfh+nfilt_mix][ir_sav]*ldust[sfh_sav]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77}  701     format(1p50e12.3)
 // {F77} 
 
@@ -1759,9 +1761,8 @@ int main(int argc, char *argv[]){
 // {F77}          write(31,805)
 // {F77}  805     format('# MARGINAL PDF HISTOGRAMS FOR EACH PARAMETER......')
 // {F77} 
-    ofs << "#" << endl;
-    ofs << "# MARGINAL PDF HISTOGRAMS FOR EACH PARAMETER......" << endl;    
-
+    fprintf(fitfp,"#\n");
+    fprintf(fitfp,"# MARGINAL PDF HISTOGRAMS FOR EACH PARAMETER......\n");    
 // {F77}  807     format(0pf10.4,1pe12.3e3)
 // {F77}  60      format('#....percentiles of the PDF......')
 // {F77}  61      format(0p5f8.3)
@@ -1778,26 +1779,27 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmu2_hist(ibin),psfh2(ibin)
 // {F77}          enddo
-    ofs << "# ... f_mu (SFH) ..." << endl;
+    fprintf(fitfp,"# ... f_mu (SFH) ...\n");
     for(ibin=0; ibin<nbin2_fmu; ibin++){
-        ofs << " " << fmu2_hist[ibin] << " " << psfh2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",fmu2_hist[ibin],psfh2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_fmu_sfh(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_fmu_sfh[k];
+        fprintf(fitfp,"%8.3f",pct_fmu_sfh[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(psfh2, fmu2_hist, nbin2_fmu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmu2_hist(1), fmu2_hist(nbin2_fmu), fmu2_hist(2) - fmu2_hist(1)
     hpbv = get_hpbv(psfh2,fmu2_hist,nbin2_fmu);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << fmu2_hist[0] << " " << fmu2_hist[nbin2_fmu-1];
-    ofs << " " << fmu2_hist[1] - fmu2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,fmu2_hist[0],fmu2_hist[nbin2_fmu-1]);
+    fprintf(fitfp,"%10.4f\n",fmu2_hist[1] - fmu2_hist[0]);
+    
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,808)
@@ -1806,25 +1808,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmu2_hist(ibin),pir2(ibin)
 // {F77}          enddo
-    ofs << "# ... f_mu (IR) ..." << endl;
+    fprintf(fitfp,"# ... f_mu (IR) ...\n");
     for(ibin=0; ibin<nbin2_fmu; ibin++){
-        ofs << " " << fmu2_hist[ibin] << " " << pir2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",fmu2_hist[ibin],pir2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_fmu_ir(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_fmu_ir[k];
+        fprintf(fitfp,"%8.3f",pct_fmu_ir[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pir2, fmu2_hist, nbin2_fmu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmu2_hist(1), fmu2_hist(nbin2_fmu), fmu2_hist(2) - fmu2_hist(1)
     hpbv = get_hpbv(pir2,fmu2_hist,nbin2_fmu);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << fmu2_hist[0] << " " << fmu2_hist[nbin2_fmu-1];
-    ofs << " " << fmu2_hist[1] - fmu2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,fmu2_hist[0],fmu2_hist[nbin2_fmu-1]);
+    fprintf(fitfp,"%10.4f\n",fmu2_hist[1] - fmu2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,809)
@@ -1833,26 +1835,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) mu2_hist(ibin),pmu2(ibin)
 // {F77}          enddo
-    ofs << "# ... mu parameter ..." << endl;
+    fprintf(fitfp,"# ... mu parameter ...\n");
     for(ibin=0; ibin<nbin2_mu; ibin++){
-        ofs << " " << mu2_hist[ibin] << " " << pmu2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",mu2_hist[ibin],pmu2[ibin]);
     }    
-
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_mu(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_mu[k];
+       fprintf(fitfp,"%8.3f",pct_mu[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pmu2, mu2_hist, nbin2_mu)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, mu2_hist(1), mu2_hist(nbin2_mu), mu2_hist(2) - mu2_hist(1)
     hpbv = get_hpbv(pmu2,mu2_hist,nbin2_mu);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << mu2_hist[0] << " " << mu2_hist[nbin2_mu-1];
-    ofs << " " << mu2_hist[1] - mu2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,mu2_hist[0],mu2_hist[nbin2_mu-1]);
+    fprintf(fitfp,"%10.4f\n",mu2_hist[1] - mu2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,810)
@@ -1861,25 +1862,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tv2_hist(ibin),ptv2(ibin)
 // {F77}          enddo
-    ofs << "# ... tau_V ..." << endl;
+    fprintf(fitfp,"# ... tau_V ...\n");
     for(ibin=0; ibin<nbin2_tv; ibin++){
-        ofs << " " << tv2_hist[ibin] << " " << ptv2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",tv2_hist[ibin],ptv2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tv(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_tv[k];
+        fprintf(fitfp,"%8.3f",pct_tv[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tv2_hist(1), tv2_hist(nbin2_tv), tv2_hist(2) - tv2_hist(1)
     hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << tv2_hist[0] << " " << tv2_hist[nbin2_tv-1];
-    ofs << " " << tv2_hist[1] - tv2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,tv2_hist[0],tv2_hist[nbin2_tv-1]);
+    fprintf(fitfp,"%10.4f\n",tv2_hist[1] - tv2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,811)
@@ -1888,27 +1889,27 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) ssfr2_hist(ibin),pssfr2(ibin)
 // {F77}          enddo
-    ofs << "# ... sSFR_0.1Gyr ..." << endl;
+    fprintf(fitfp,"# ... sSFR_0.1Gyr ...\n");
     for(ibin=0; ibin<nbin2_ssfr; ibin++){
-        ofs << " " << ssfr2_hist[ibin] << " " << pssfr2[ibin] << endl;
+        fprintf(fitfp,"%12.3E%12.3E\n",ssfr2_hist[ibin],pssfr2[ibin]);
     }
 // {F77}         
 // {F77}  812     format(1p2e12.3e3)
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_ssfr(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_ssfr[k];
+        fprintf(fitfp,"%12.3E",pct_ssfr[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pssfr2, ssfr2_hist, nbin2_ssfr)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, ssfr2_hist(1), ssfr2_hist(nbin2_ssfr), ssfr2_hist(2) - ssfr2_hist(1)
     hpbv = get_hpbv(pssfr2, ssfr2_hist, nbin2_ssfr);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << ssfr2_hist[0] << " " << ssfr2_hist[nbin2_ssfr-1];
-    ofs << " " << ssfr2_hist[1] - ssfr2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,ssfr2_hist[0],ssfr2_hist[nbin2_ssfr-1]);
+    fprintf(fitfp,"%10.4f\n",ssfr2_hist[1] - ssfr2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,813)
@@ -1917,25 +1918,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) a2_hist(ibin),pa2(ibin)
 // {F77}          enddo
-    ofs << "# ... M(stars) ..." << endl;
+    fprintf(fitfp,"# ... M(stars) ...\n");
     for(ibin=0; ibin<nbin2_a; ibin++){
-        ofs << " " << a2_hist[ibin] << " " << pa2[ibin] << endl;
+        fprintf(fitfp,"%12.3E%12.3E\n",a2_hist[ibin],pa2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_mstr(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_mstr[k];
+        fprintf(fitfp,"%12.3E",pct_mstr[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pa2, a2_hist, nbin2_a)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, a2_hist(1), a2_hist(nbin2_a), a2_hist(2) - a2_hist(1)
     hpbv = get_hpbv(pa2, a2_hist, nbin2_a);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << a2_hist[0] << " " << a2_hist[nbin2_a-1];
-    ofs << " " << a2_hist[1] - a2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,a2_hist[0],a2_hist[nbin2_a-1]);
+    fprintf(fitfp,"%10.4f\n",a2_hist[1] - a2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,814)
@@ -1944,25 +1945,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) ld2_hist(ibin),pldust2(ibin)
 // {F77}          enddo
-    ofs << "# ... Ldust ..." << endl;
+    fprintf(fitfp,"# ... Ldust ...\n");
     for(ibin=0; ibin<nbin2_ld; ibin++){
-        ofs << " " << ld2_hist[ibin] << " " << pldust2[ibin] << endl;
+        fprintf(fitfp,"%12.3E%12.3E\n",ld2_hist[ibin],pldust2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_ld(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_ld[k];
+        fprintf(fitfp,"%12.3E",pct_ld[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pldust2, ld2_hist, nbin2_ld)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, ld2_hist(1), ld2_hist(nbin2_ld), ld2_hist(2) - ld2_hist(1)
     hpbv = get_hpbv(pldust2, ld2_hist, nbin2_ld);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << ld2_hist[0] << " " << ld2_hist[nbin2_ld-1];
-    ofs << " " << ld2_hist[1] - ld2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,ld2_hist[0],ld2_hist[nbin2_ld-1]);
+    fprintf(fitfp,"%10.4f\n",ld2_hist[1] - ld2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,815)
@@ -1971,25 +1972,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tbg2_2_hist(ibin),ptbg2_2(ibin)
 // {F77}          enddo
-    ofs << "# ... T_C^ISM ..." << endl;
+    fprintf(fitfp,"# ... T_C^ISM ...\n");
     for(ibin=0; ibin<nbin2_tbg2; ibin++){
-        ofs << " " << tbg2_2_hist[ibin] << " " << ptbg2_2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",tbg2_2_hist[ibin],ptbg2_2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tbg2(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_tbg2[k];
+        fprintf(fitfp,"%8.3f",pct_tbg2[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptbg2_2, tbg2_2_hist, nbin2_tbg2)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tbg2_2_hist(1), tbg2_2_hist(nbin2_tbg2), tbg2_2_hist(2) - tbg2_2_hist(1)
     hpbv = get_hpbv(ptbg2_2, tbg2_2_hist, nbin2_tbg2);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << tbg2_2_hist[0] << " " << tbg2_2_hist[nbin2_tbg2-1];
-    ofs << " " << tbg2_2_hist[1] - tbg2_2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,tbg2_2_hist[0],tbg2_2_hist[nbin2_tbg2-1]);
+    fprintf(fitfp,"%10.4f\n",tbg2_2_hist[1] - tbg2_2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,820)
@@ -1998,25 +1999,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tbg1_2_hist(ibin),ptbg1_2(ibin)
 // {F77}          enddo
-    ofs << "# ... T_W^BC ..." << endl;
+    fprintf(fitfp,"# ... T_W^BC ...\n");
     for(ibin=0; ibin<nbin2_tbg1; ibin++){
-        ofs << " " << tbg1_2_hist[ibin] << " " << ptbg1_2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",tbg1_2_hist[ibin],ptbg1_2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tbg1(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_tbg1[k];
+        fprintf(fitfp,"%8.3f",pct_tbg1[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptbg1_2, tbg1_2_hist, nbin2_tbg1)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tbg1_2_hist(1), tbg1_2_hist(nbin2_tbg1), tbg1_2_hist(2) - tbg1_2_hist(1)
     hpbv = get_hpbv(ptbg1_2, tbg1_2_hist, nbin2_tbg1);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << tbg1_2_hist[0] << " " << tbg1_2_hist[nbin2_tbg1-1];
-    ofs << " " << tbg1_2_hist[1] - tbg1_2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,tbg1_2_hist[0],tbg1_2_hist[nbin2_tbg1-1]);
+    fprintf(fitfp,"%10.4f\n",tbg1_2_hist[1] - tbg1_2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,821)
@@ -2025,25 +2026,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmuism2_hist(ibin),pism2(ibin)
 // {F77}          enddo
-    ofs << "# ... xi_C^tot ..." << endl;
+    fprintf(fitfp,"# ... xi_C^tot ...\n");
     for(ibin=0; ibin<nbin2_fmu_ism; ibin++){
-        ofs << " " << fmuism2_hist[ibin] << " " << pism2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",fmuism2_hist[ibin],pism2[ibin]);
     }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_ism(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_ism[k];
+        fprintf(fitfp,"%10.3f",pct_ism[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pism2, fmuism2_hist, nbin2_fmu_ism)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmuism2_hist(1), fmuism2_hist(nbin2_fmu_ism), fmuism2_hist(2) - fmuism2_hist(1)
     hpbv = get_hpbv(pism2, fmuism2_hist, nbin2_fmu_ism);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << fmuism2_hist[0] << " " << fmuism2_hist[nbin2_fmu_ism-1];
-    ofs << " " << fmuism2_hist[1] - fmuism2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,fmuism2_hist[0],fmuism2_hist[nbin2_fmu_ism-1]);
+    fprintf(fitfp,"%10.4f\n",fmuism2_hist[1] - fmuism2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,816)
@@ -2052,25 +2053,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) xi2_hist(ibin),pxi1_2(ibin)
 // {F77}          enddo
-    ofs << "# ... xi_PAH^tot ..." << endl;
+    fprintf(fitfp,"# ... xi_PAH^tot ...\n");
     for(ibin=0; ibin<nbin2_xi; ibin++){
-        ofs << " " << xi2_hist[ibin] << " " << pxi1_2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",xi2_hist[ibin],pxi1_2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_xi1(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_xi1[k];
+        fprintf(fitfp,"%8.3f",pct_xi1[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pxi1_2, xi2_hist, nbin2_xi)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, xi2_hist(1), xi2_hist(nbin2_xi), xi2_hist(2) - xi2_hist(1)
     hpbv = get_hpbv(pxi1_2, xi2_hist, nbin2_xi);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << xi2_hist[0] << " " << xi2_hist[nbin2_xi-1];
-    ofs << " " << xi2_hist[1] - xi2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,xi2_hist[0],xi2_hist[nbin2_xi-1]);
+    fprintf(fitfp,"%10.4f\n",xi2_hist[1] - xi2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,817)
@@ -2079,25 +2080,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) xi2_hist(ibin),pxi2_2(ibin)
 // {F77}          enddo
-    ofs << "# ... xi_MIR^tot ..." << endl;
+    fprintf(fitfp,"# ... xi_MIR^tot ...\n");
     for(ibin=0; ibin<nbin2_xi; ibin++){
-        ofs << " " << xi2_hist[ibin] << " " << pxi2_2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",xi2_hist[ibin],pxi2_2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_xi2(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_xi2[k];
+        fprintf(fitfp,"%8.3f",pct_xi2[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pxi2_2, xi2_hist, nbin2_xi)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, xi2_hist(1), xi2_hist(nbin2_xi), xi2_hist(2) - xi2_hist(1)
     hpbv = get_hpbv(pxi2_2, xi2_hist, nbin2_xi);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << xi2_hist[0] << " " << xi2_hist[nbin2_xi-1];
-    ofs << " " << xi2_hist[1] - xi2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,xi2_hist[0],xi2_hist[nbin2_xi-1]);
+    fprintf(fitfp,"%10.4f\n",xi2_hist[1] - xi2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,818)
@@ -2106,25 +2107,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) xi2_hist(ibin),pxi3_2(ibin)
 // {F77}          enddo
-    ofs << "# ... xi_MIR^tot ..." << endl;
+    fprintf(fitfp,"# ... xi_W^tot ...\n");
     for(ibin=0; ibin<nbin2_xi; ibin++){
-        ofs << " " << xi2_hist[ibin] << " " << pxi3_2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",xi2_hist[ibin],pxi3_2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_xi3(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_xi3[k];
+        fprintf(fitfp,"%8.3f",pct_xi3[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pxi3_2, xi2_hist, nbin2_xi)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, xi2_hist(1), xi2_hist(nbin2_xi), xi2_hist(2) - xi2_hist(1)
     hpbv = get_hpbv(pxi3_2, xi2_hist, nbin2_xi);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << xi2_hist[0] << " " << xi2_hist[nbin2_xi-1];
-    ofs << " " << xi2_hist[1] - xi2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,xi2_hist[0],xi2_hist[nbin2_xi-1]);
+    fprintf(fitfp,"%10.4f\n",xi2_hist[1] - xi2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,81)
@@ -2133,25 +2134,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tvism2_hist(ibin),ptvism2(ibin)
 // {F77}          enddo
-    ofs << "# ... tau_V^ISM..." << endl;
+    fprintf(fitfp,"# ... tau_V^ISM...\n");
     for(ibin=0; ibin<nbin2_tvism; ibin++){
-        ofs << " " << tvism2_hist[ibin] << " " << ptvism2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",tvism2_hist[ibin],ptvism2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tvism(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_tvism[k];
+        fprintf(fitfp,"%8.3f",pct_tvism[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptvism2, tvism2_hist, nbin2_tvism)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tvism2_hist(1), tvism2_hist(nbin2_tvism), tvism2_hist(2) - tvism2_hist(1)
     hpbv = get_hpbv(ptvism2, tvism2_hist, nbin2_tvism);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << tvism2_hist[0] << " " << tvism2_hist[nbin2_tvism-1];
-    ofs << " " << tvism2_hist[1] - tvism2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,tvism2_hist[0],tvism2_hist[nbin2_tvism-1]);
+    fprintf(fitfp,"%10.4f\n",tvism2_hist[1] - tvism2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,888)
@@ -2160,25 +2161,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) md2_hist(ibin),pmd_2(ibin)
 // {F77}          enddo
-    ofs << "# ... M(dust)..." << endl;
+    fprintf(fitfp,"# ... M(dust)...\n");
     for(ibin=0; ibin<nbin2_md; ibin++){
-        ofs << " " << md2_hist[ibin] << " " << pmd_2[ibin] << endl;
+       fprintf(fitfp,"%10.4f%12.3E\n",md2_hist[ibin],pmd_2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_md(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_md[k];
+        fprintf(fitfp,"%8.3f",pct_md[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pmd_2, md2_hist, nbin2_md)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, md2_hist(1), md2_hist(nbin2_md), md2_hist(2) - md2_hist(1)
     hpbv = get_hpbv(pmd_2, md2_hist, nbin2_md);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << md2_hist[0] << " " << md2_hist[nbin2_md-1];
-    ofs << " " << md2_hist[1] - md2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,md2_hist[0],md2_hist[nbin2_md-1]);
+    fprintf(fitfp,"%10.4f\n",md2_hist[1] - md2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,889)
@@ -2187,25 +2188,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) sfr2_hist(ibin),psfr2(ibin)
 // {F77}          enddo
-    ofs << "# ... M(dust)..." << endl;
+    fprintf(fitfp,"# ... SFR_0.1Gyr ...\n");
     for(ibin=0; ibin<nbin2_sfr; ibin++){
-        ofs << " " << sfr2_hist[ibin] << " " << psfr2[ibin] << endl;
+        fprintf(fitfp,"%10.4f%12.3E\n",sfr2_hist[ibin],psfr2[ibin]);
     }    
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_sfr(k),k=1,5)
-    ofs << "#....percentiles of the PDF......" << endl;
+    fprintf(fitfp,"#....percentiles of the PDF......\n");
     for(k=0;k<5;k++){
-        ofs << " " << pct_sfr[k];
+        fprintf(fitfp,"%8.3f",pct_sfr[k]);
     }
-    ofs << endl;
+    fprintf(fitfp,"\n");
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(psfr2, sfr2_hist, nbin2_sfr)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, sfr2_hist(1), sfr2_hist(nbin2_sfr), sfr2_hist(2) - sfr2_hist(1)
     hpbv = get_hpbv(psfr2, sfr2_hist, nbin2_sfr);
-    ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << sfr2_hist[0] << " " << sfr2_hist[nbin2_sfr-1];
-    ofs << " " << sfr2_hist[1] - sfr2_hist[0] << endl;
+    fprintf(fitfp,"# theSkyNet2\n");
+    fprintf(fitfp,"%10.4f %10.4f %10.4f",hpbv,sfr2_hist[0],sfr2_hist[nbin2_sfr-1]);
+    fprintf(fitfp,"%10.4f\n",sfr2_hist[1] - sfr2_hist[0]);
 // {F77} c theSkyNet
 // {F77} 
 // {F77} c     ---------------------------------------------------------------------------
@@ -2222,8 +2223,8 @@ int main(int argc, char *argv[]){
 // {F77}             call get_bestfit_sed(indx(sfh_sav),ir_sav,a_sav,
 // {F77}      +           fmu_sfh(sfh_sav),redshift(i_gal),outfile2)
     if(skynet){
-        ofs << " #...theSkyNet parameters of this model" << endl;
-        ofs << " " << indx[sfh_sav] << " " << ir_sav+1 << " " << a_sav << " " << fmu_sfh[sfh_sav] << " " << redshift[i_gal] << endl;
+        fprintf(fitfp," #...theSkyNet parameters of this model\n");
+        fprintf(fitfp,"%10i%10i%20.6E%20.4E%10.2E\n",indx[sfh_sav],ir_sav+1,a_sav,fmu_sfh[sfh_sav],redshift[i_gal]);
     } else {
         // TODO : Imlement best fit.
     }
