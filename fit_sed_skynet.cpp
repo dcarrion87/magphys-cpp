@@ -1892,7 +1892,6 @@ int main(int argc, char *argv[]){
     for(ibin=0; ibin<nbin2_ssfr; ibin++){
         ofs << " " << ssfr2_hist[ibin] << " " << pssfr2[ibin] << endl;
     }
-}
 // {F77}         
 // {F77}  812     format(1p2e12.3e3)
 // {F77}          write(31,60)
@@ -1906,11 +1905,10 @@ int main(int argc, char *argv[]){
 // {F77}          hpbv = get_hpbv(pssfr2, ssfr2_hist, nbin2_ssfr)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, ssfr2_hist(1), ssfr2_hist(nbin2_ssfr), ssfr2_hist(2) - ssfr2_hist(1)
-    hpbv = get_hpbv(ptv2, tv2_hist, nbin2_tv);
+    hpbv = get_hpbv(pssfr2, ssfr2_hist, nbin2_ssfr);
     ofs << "# theSkyNet2" << endl;
-    ofs << " " << hpbv << " " << tv2_hist[0] << " " << tv2_hist[nbin2_tv-1];
-    ofs << " " << tv2_hist[1] - tv2_hist[0] << endl;
-    
+    ofs << " " << hpbv << " " << ssfr2_hist[0] << " " << ssfr2_hist[nbin2_ssfr-1];
+    ofs << " " << ssfr2_hist[1] - ssfr2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,813)
@@ -1919,12 +1917,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) a2_hist(ibin),pa2(ibin)
 // {F77}          enddo
+    ofs << "# ... M(stars) ..." << endl;
+    for(ibin=0; ibin<nbin2_a; ibin++){
+        ofs << " " << a2_hist[ibin] << " " << pa2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_mstr(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_mstr[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pa2, a2_hist, nbin2_a)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, a2_hist(1), a2_hist(nbin2_a), a2_hist(2) - a2_hist(1)
+    hpbv = get_hpbv(pa2, a2_hist, nbin2_a);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << a2_hist[0] << " " << a2_hist[nbin2_a-1];
+    ofs << " " << a2_hist[1] - a2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,814)
@@ -1933,12 +1944,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,812) ld2_hist(ibin),pldust2(ibin)
 // {F77}          enddo
+    ofs << "# ... Ldust ..." << endl;
+    for(ibin=0; ibin<nbin2_ld; ibin++){
+        ofs << " " << ld2_hist[ibin] << " " << pldust2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,62) (pct_ld(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_ld[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pldust2, ld2_hist, nbin2_ld)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, ld2_hist(1), ld2_hist(nbin2_ld), ld2_hist(2) - ld2_hist(1)
+    hpbv = get_hpbv(pldust2, ld2_hist, nbin2_ld);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << ld2_hist[0] << " " << ld2_hist[nbin2_ld-1];
+    ofs << " " << ld2_hist[1] - ld2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,815)
@@ -1947,12 +1971,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tbg2_2_hist(ibin),ptbg2_2(ibin)
 // {F77}          enddo
+    ofs << "# ... T_C^ISM ..." << endl;
+    for(ibin=0; ibin<nbin2_tbg2; ibin++){
+        ofs << " " << tbg2_2_hist[ibin] << " " << ptbg2_2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tbg2(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_tbg2[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptbg2_2, tbg2_2_hist, nbin2_tbg2)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tbg2_2_hist(1), tbg2_2_hist(nbin2_tbg2), tbg2_2_hist(2) - tbg2_2_hist(1)
+    hpbv = get_hpbv(ptbg2_2, tbg2_2_hist, nbin2_tbg2);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << tbg2_2_hist[0] << " " << tbg2_2_hist[nbin2_tbg2-1];
+    ofs << " " << tbg2_2_hist[1] - tbg2_2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,820)
@@ -1961,12 +1998,25 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) tbg1_2_hist(ibin),ptbg1_2(ibin)
 // {F77}          enddo
+    ofs << "# ... T_W^BC ..." << endl;
+    for(ibin=0; ibin<nbin2_tbg1; ibin++){
+        ofs << " " << tbg1_2_hist[ibin] << " " << ptbg1_2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_tbg1(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_tbg1[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(ptbg1_2, tbg1_2_hist, nbin2_tbg1)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, tbg1_2_hist(1), tbg1_2_hist(nbin2_tbg1), tbg1_2_hist(2) - tbg1_2_hist(1)
+    hpbv = get_hpbv(ptbg1_2, tbg1_2_hist, nbin2_tbg1);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << tbg1_2_hist[0] << " " << tbg1_2_hist[nbin2_tbg1-1];
+    ofs << " " << tbg1_2_hist[1] - tbg1_2_hist[0] << endl;
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,821)
@@ -1975,12 +2025,27 @@ int main(int argc, char *argv[]){
 // {F77} c theSkyNet
 // {F77}             write(31,807) fmuism2_hist(ibin),pism2(ibin)
 // {F77}          enddo
+    ofs << "# ... xi_C^tot ..." << endl;
+    for(ibin=0; ibin<nbin2_fmu_ism; ibin++){
+        ofs << " " << fmuism2_hist[ibin] << " " << pism2[ibin] << endl;
+    }
 // {F77}          write(31,60)
 // {F77}          write(31,61) (pct_ism(k),k=1,5)
+    ofs << "#....percentiles of the PDF......" << endl;
+    for(k=0;k<5;k++){
+        ofs << " " << pct_ism[k];
+    }
+    ofs << endl;
 // {F77} c theSkyNet
 // {F77}          hpbv = get_hpbv(pism2, fmuism2_hist, nbin2_fmu_ism)
 // {F77}          write(31, 900)
 // {F77}          write(31, 901) hpbv, fmuism2_hist(1), fmuism2_hist(nbin2_fmu_ism), fmuism2_hist(2) - fmuism2_hist(1)
+    hpbv = get_hpbv(pism2, fmuism2_hist, nbin2_fmu_ism);
+    ofs << "# theSkyNet2" << endl;
+    ofs << " " << hpbv << " " << fmuism2_hist[0] << " " << fmuism2_hist[nbin2_fmu_ism-1];
+    ofs << " " << fmuism2_hist[1] - fmuism2_hist[0] << endl;
+    
+}
 // {F77} c theSkyNet
 // {F77} 
 // {F77}          write(31,816)
